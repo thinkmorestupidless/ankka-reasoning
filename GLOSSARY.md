@@ -49,6 +49,10 @@ Avoid: timestamp, effective time
 Of a record: accepted by the service. The time a record was recorded is set by the
 service and never by the writer.
 
+### steward
+*Proposed.* A writer the deployment names, who may withdraw the text of any evidence or claim,
+whoever sent it.
+
 ### withdrawn
 *Proposed.* Of evidence or a claim: with its text taken out for good. The excerpt, author and
 locator of evidence, or the statement of a claim, are no longer held anywhere; the record, its
@@ -223,7 +227,7 @@ service held when the reader asked.
 
 ### wait
 A writer's request to be answered only once the graph has a node for a record it
-wrote, or once a limit has passed.
+wrote and an edge for each link that record stated, or once a limit has passed.
 
 ### vocabulary
 The list of every kind of node and edge the graph may hold, with each kind's layer,

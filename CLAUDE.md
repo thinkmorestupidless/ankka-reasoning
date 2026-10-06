@@ -4,12 +4,14 @@ Guidance for Claude Code (claude.ai/code) working in this repository.
 
 ## What this is
 
-`ankka-reasoning` is a reasoning graph built as an ankka application: an event-sourced record of
-evidence, claims, hypotheses and beliefs, published as graph deltas for ankka-flow's merge sink to
-keep in a graph database. It is at the design stage. There is a spec, living features and a
-glossary, and no code or build yet.
+`ankka-reasoning` is a reasoning graph built as an ankka application: a record of evidence,
+claims, hypotheses and beliefs, each an ankka entity, published as graph deltas for ankka-flow's
+merge sink to keep in a graph database. It is at the design stage. There is a spec, a plan, living
+features and a glossary, and no code or build yet.
 
-Start with `specs/001-belief-layer/spec.md`, then `features/` and `GLOSSARY.md`. The family map,
+Start with `specs/001-belief-layer/spec.md` and `plan.md`, then `features/` and `GLOSSARY.md`.
+`research.md` there says why each decision was made, R1 first: text a writer supplied is never
+written to an event, because ankka never removes one. The family map,
 conventions and cross-repo decisions are in `../ankka-brain`; read `family.md` and
 `repos/ankka-reasoning.md` there before cross-repo work.
 
@@ -23,7 +25,7 @@ conventions and cross-repo decisions are in `../ankka-brain`; read `family.md` a
 | Links point backwards | A record links only to records already held and dated no later than itself. Cycles cannot be made, so nothing checks for them. |
 | The belief layer names nothing above it | No market, and later no process, word in the belief layer. A layer adds kinds and edges from its own nodes and changes nothing beneath it. |
 | Answers are records | An explanation is made of held records and links. No text is generated. |
-| Missing platform features are requests | What ankka or ankka-flow cannot do is written down as a request to them, not worked around here. |
+| Missing platform features are requests | What ankka or ankka-flow cannot do is written down as a request to them. Where a feature cannot wait, the way round is named in its plan's Complexity Tracking beside the request that would remove it, and never reaches into the platform's tables or internals. |
 
 ## Specs and living features
 

@@ -61,6 +61,7 @@ they will be writers like any other.
 - Q: Which time does an as-of answer read: a record's date, the time it was recorded, or either on request? → A: Either. As of a date by default; a reader may also ask as recorded by a time, which gives only what the service held then and never changes afterwards.
 - Q: Who may write as a holder in this first feature? → A: Only the writers bound to it. A holder is registered with the writers that speak for it, anything stated as that holder by another writer is refused, and every record keeps which writer sent it.
 - Q: How should this feature treat content that later has to be taken out of a record? → A: Withdraw the content. The text of evidence or of a claim can be withdrawn for good while the record, its links, its dates and the fact of withdrawal stay. It is the one exception to nothing being edited.
+- Planning, same day: the wait in FR-020 covers a record's edges as well as its node, since the two reach the graph separately; and FR-034 gains a steward, a writer the deployment names who may withdraw the text of any record, so that text can come out when its writer is gone. `steward` joins the glossary as a ninth term still proposed.
 - Q: How are the glossary's proposed terms settled? → A: All settled as written except eight, which stay proposed until they have been used for a while: holder, held, dated, revises, withdrawn, speaks for, rests on, as recorded by.
 
 ## User Scenarios & Testing *(mandatory)*
@@ -322,6 +323,7 @@ as withdrawn. Empty and rebuild the graph database and find the text in neither.
 - added `features/record/withdrawal.feature`: withdrawn evidence recorded again stays withdrawn
 - added `features/record/withdrawal.feature`: a withdrawal needs a note
 - added `features/record/withdrawal.feature`: a writer who neither sent a record nor speaks for its holder does not withdraw it
+- added `features/record/withdrawal.feature`: a steward withdraws the text of a record it did not send
 
 ---
 
@@ -353,6 +355,9 @@ as withdrawn. Empty and rebuild the graph database and find the text in neither.
 - A market's price has not moved: no belief revision is added (*a price observation equal to the
   current one adds no belief revision*).
 - A market cannot be decided: it is resolved as void (*a market may be resolved as void*).
+- A price observation arrives after a later one was recorded: refused, as any belief revision dated
+  before the one it follows is (*a belief revision cannot be dated before the one it follows*).
+  Observations are sent in the order they were observed.
 - A holder's probabilities across a question's hypotheses do not sum to one: accepted. Each belief
   is one hypothesis's (FR-006).
 
@@ -424,8 +429,8 @@ as withdrawn. Empty and rebuild the graph database and find the text in neither.
   graph, with the service sending nothing again; a record published twice MUST leave the graph
   unchanged.
 - **FR-020**: Recording MUST NOT wait for the graph. A writer MUST be able to ask to be answered
-  once the graph has the node for a record it wrote, within a limit, and is told when the limit
-  passed first.
+  once the graph has the node for a record it wrote and every edge that record stated, within a
+  limit, and is told when the limit passed first.
 
 **Reading**
 
@@ -476,15 +481,17 @@ as withdrawn. Empty and rebuild the graph database and find the text in neither.
 
 - **FR-034**: The writer who recorded a piece of evidence MUST be able to withdraw its text (its
   excerpt, author and locator), and a writer who speaks for a claim's holder MUST be able to
-  withdraw its statement, in each case with a note saying why. Any other writer is refused, and so
-  is a withdrawal with no note.
+  withdraw its statement, in each case with a note saying why. A steward, a writer the deployment
+  names, MUST be able to withdraw the text of any evidence or claim the same way. Any other writer
+  is refused, and so is a withdrawal with no note.
 - **FR-035**: A withdrawn record MUST keep its identifier, its links, its dates, the time it was
   recorded and the writer who sent it, and MUST gain the note, the writer who withdrew it and the
   time. A withdrawal is not undone.
 - **FR-036**: Withdrawn text MUST NOT be readable from the service, from the graph database, or
   from a graph database rebuilt from the delta topic afterwards, at any time asked about, earlier
   ones included. It MUST NOT remain in the delta topic once the broker has compacted the record's
-  key, nor in anything the service keeps from which it could be read back.
+  key, nor be readable through the service or by any query of its database. Storage the database
+  has not yet reclaimed, and backups, are outside this requirement.
 - **FR-037**: Every answer that includes a withdrawn record MUST show it as withdrawn, with its
   source or holder and its date, and no text for it.
 
@@ -560,8 +567,9 @@ within the delta contract's rules for identifiers and property values.
   second.
 - **SC-008**: Every scenario of the belief layer passes with no market held anywhere, and the
   belief layer of the vocabulary contains no kind, edge or property of the market layer.
-- **SC-009**: A person who has read only the vocabulary can write a graph query that reaches the
-  sources behind a belief revision, without reading the service's code.
+- **SC-009**: The vocabulary is enough to read the graph by: the trace query printed with it, run
+  as written against the launch example, returns the claim, the evidence and the source behind the
+  current belief revision.
 - **SC-010**: Every attempt in the test set to state a claim, a belief revision, a price observation
   or a resolution as a holder the writer does not speak for is refused, and every held record names
   the writer who sent it.
@@ -596,10 +604,8 @@ within the delta contract's rules for identifiers and property values.
   caller may read.
 - The service keeps an excerpt and a locator for evidence, not the original document.
 - Text that can be withdrawn has to be kept somewhere it can truly be erased from, which an
-  append-only journal of events is not. How the service does that on ankka is the plan's first
-  question, and whether ankka needs a change for it is to be found out there.
-- Who besides the writer may withdraw, such as an operator answering a request from outside, is
-  the plan's to settle.
+  append-only journal of events is not. The plan keeps every record that carries text in a key
+  value entity, whose row is overwritten, for that reason.
 - A market's price is observed a few times an hour at most. The full price series belongs to the
   market's own system.
 - Every name, number and date in the launch example is made up.
@@ -616,5 +622,5 @@ within the delta contract's rules for identifiers and property values.
 - Matching evidence or claims by meaning.
 - Removing a record outright. Withdrawing text from a question, a hypothesis, a holder, a source,
   a market or a resolution. Erasing withdrawn text from backups of the service's database or of
-  the broker.
+  the broker, or from storage the database has not yet reclaimed.
 - The market itself: orders, positions, settlement, prices beyond the observations recorded here.

@@ -35,7 +35,7 @@ Feature: The reasoning as a graph
 
   Scenario: a writer waits for the graph to hold what it wrote
     When a writer records evidence and waits for the graph
-    Then the wait ends when the graph has a node for that evidence
+    Then the wait ends when the graph has a node for that evidence and an edge for each link it stated
 
   Scenario: a wait that passes its limit says so
     Given a graph database that cannot be reached

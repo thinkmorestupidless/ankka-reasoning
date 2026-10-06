@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" role="img" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" aria-labelledby="title desc">
   <title id="title">How ankka-reasoning works</title>
-  <desc id="desc">Writers, a person, a script or a test and later agents, send records to the ankka-reasoning service, which runs in an ankka project. Inside the service, Records holds one entity per record, never edited, and checks every rule against the service's own records; its events are kept in the service's Postgres database. Each change goes to the graph consumers, one per kind of record, which turn each record into a node and each link it stated into an edge and publish them as graph deltas to a compacted delta topic in Kafka under the contract ankka.graph-delta.v1. An ankka-flow pipeline that is the built-in Neo4j merge sink alone reads the topic and merges each delta into the graph database, Neo4j, which is a copy that can be emptied and rebuilt from the topic alone. Readers ask the service's Answers, which query the graph database, read only, and reply with records only. A write never waits for the graph.</desc>
+  <desc id="desc">Writers, a person, a script or a test and later agents, send records to the ankka-reasoning service, which runs in an ankka project. Inside the service, Records holds one entity per record, never edited, and checks every rule against the service's own records; every record is kept in the service's Postgres database. Each change goes to the graph consumers, one per kind of record, which turn each record into a node and each link it stated into an edge and publish them as graph deltas to a compacted delta topic in Kafka under the contract ankka.graph-delta.v1. An ankka-flow pipeline that is the built-in Neo4j merge sink alone reads the topic and merges each delta into the graph database, Neo4j, which is a copy that can be emptied and rebuilt from the topic alone. Readers ask the service's Answers, which query the graph database, read only, and reply with records only. A write never waits for the graph.</desc>
   <style>
     .bg { fill: #ffffff; }
     .ink { fill: #1f2328; }
@@ -70,7 +70,7 @@
   <rect class="box" x="564" y="128" width="104" height="76" rx="8"/>
   <text class="title ink" x="616" y="154" text-anchor="middle">Postgres</text>
   <text class="small muted" x="616" y="174" text-anchor="middle">every record,</text>
-  <text class="small muted" x="616" y="190" text-anchor="middle">as events</text>
+  <text class="small muted" x="616" y="190" text-anchor="middle">kept by ankka</text>
   <line class="line" x1="524" y1="166" x2="562" y2="166" marker-end="url(#a)"/>
 
   <rect class="hot" x="298" y="268" width="370" height="84" rx="8"/>

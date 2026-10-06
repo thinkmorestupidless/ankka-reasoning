@@ -44,3 +44,6 @@
   date or by time recorded; a holder is written for only by the writers that speak for it; the text
   of evidence or of a claim can be withdrawn (User Story 7, FR-034 to FR-037); and all glossary
   terms are settled but eight. `speckit-bdd check` reports no findings over 118 scenarios.
+- After planning and analysis on 2026-10-06: FR-020, FR-034, FR-036 and SC-009 were reworded, a
+  steward and one scenario were added (119 scenarios, nine terms still proposed), and every
+  constraint in the data model has a named rule.

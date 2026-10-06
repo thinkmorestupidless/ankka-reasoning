@@ -58,3 +58,9 @@ Feature: Withdrawing a record's text
     When that writer withdraws its text, giving a note
     Then the writer is refused, naming the evidence
     And the evidence reads as it was recorded
+
+  Scenario: a steward withdraws the text of a record it did not send
+    Given a steward who did not record the evidence from the source "the regulator"
+    When the steward withdraws its text, giving a note
+    Then the evidence is held with no excerpt, no author and no locator
+    And the evidence is held as withdrawn, with the note, the steward and the time
