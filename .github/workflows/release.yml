@@ -1,0 +1,273 @@
+name: release
+
+# A tag is a release, and only a tag publishes anything. `v0.1.0` publishes four things:
+#
+#   release-page   the tag's GitHub release, with the service descriptor and the pipeline blueprint
+#                  of that version attached
+#   libraries      the three layer modules to Maven Central, signed:
+#                  com.thinkmorestupidless:ankka-reasoning-{graph,belief,market}_3
+#   image          the service, to ghcr.io/thinkmorestupidless/ankka-reasoning:<version> and :latest
+#   marketplace    the documentation as a Claude Code plugin, to thinkmorestupidless/ankka-marketplace
+#
+# The documentation site is not here: docs.yml publishes it from main.
+#
+# A tag with a hyphen (v0.2.0-rc.1) is a pre-release: it gets the release page, marked as one, and
+# nothing else. Nothing reaches a registry, because nothing on Maven Central can be replaced.
+#
+# What has to exist outside this repository, once:
+#   PGP_SECRET, PGP_PASSPHRASE, SONATYPE_USERNAME, SONATYPE_PASSWORD
+#       repository secrets, the same four ankka's release uses; the namespace
+#       com.thinkmorestupidless is already claimed on the Central Portal
+#   MARKETPLACE_REPO_TOKEN
+#       a repository secret: a token with contents:write on ankka-marketplace
+#   the package ankka-reasoning on ghcr.io made public, after its first push: a new package is
+#       private, and a private image is one nobody can run
+#
+# The version is the tag's and comes from git, never from a file: sbt-dynver reads it, and every job
+# refuses a build whose version is not the tag's.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  release-page:
+    # Created first, so the image job has somewhere to attach to. A re-run finds the release and
+    # leaves it.
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "release $GITHUB_REF_NAME exists"
+          else
+            prerelease=()
+            [[ "$GITHUB_REF_NAME" == *-* ]] && prerelease=(--prerelease)
+            gh release create "$GITHUB_REF_NAME" --verify-tag --title "ankka-reasoning $version" --generate-notes "${prerelease[@]}"
+          fi
+
+  libraries:
+    # The three layers to Maven Central through the Sonatype Central Portal, signed. Everything else
+    # in the build carries `publish / skip`.
+    #
+    # Upload, and stop, as ankka's release does: ci-release stops at `sonaBundle` and the step after
+    # it uploads the zip through the portal's own API with publishingType=AUTOMATIC, which answers
+    # with the deployment id at once. The portal validates and publishes on its own; nothing here
+    # waits for the sync to repo1, which is minutes on a good day.
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # dynver needs the tags
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: sbt
+      - uses: sbt/setup-sbt@v1
+      - name: The version is the tag's, from a clean tree, or nothing is published
+        run: |
+          set -euo pipefail
+          git update-index -q --refresh
+          git diff-index --quiet HEAD -- || { echo "::error::working tree is dirty; dynver would build a -SNAPSHOT, not a release"; git status --porcelain; exit 1; }
+          version="${GITHUB_REF_NAME#v}"
+          built="$(sbt -batch -error 'print graph/version' | tail -1 | tr -d '[:space:]')"
+          [ "$built" = "$version" ] || { echo "::error::the build's version is '$built', not the tag's '$version'"; exit 1; }
+      # A version on Central cannot be replaced, and the portal refuses one it already holds. A
+      # re-run of the tag therefore asks repo1 first and uploads nothing a second time.
+      - name: Is this version already on Maven Central?
+        id: central
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          url="https://repo1.maven.org/maven2/com/thinkmorestupidless/ankka-reasoning-graph_3/$version/ankka-reasoning-graph_3-$version.pom"
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$url" || true)
+          echo "$url -> $code"
+          if [ "$code" = "200" ]; then
+            echo "::notice::$version is already on Maven Central; not uploading it again"
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+      # What is about to become permanent is tested here, not only on the pull request that led to
+      # the tag. These three need no Docker and take seconds.
+      - run: sbt graph/test belief/test market/test
+        if: steps.central.outputs.published != 'true'
+      - run: sbt ci-release
+        if: steps.central.outputs.published != 'true'
+        env:
+          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+          PGP_SECRET: ${{ secrets.PGP_SECRET }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          # ci-release imports the key, runs publishSigned into the local staging directory, and
+          # then the command named here. `sonaBundle` zips that directory and stops.
+          CI_SONATYPE_RELEASE: sonaBundle
+      - name: Upload the bundle to the Central Portal, to be published automatically
+        if: steps.central.outputs.published != 'true'
+        env:
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [ -n "$SONATYPE_USERNAME" ] && [ -n "$SONATYPE_PASSWORD" ] || { echo "::error::the secrets SONATYPE_USERNAME and SONATYPE_PASSWORD are not set"; exit 1; }
+          bundle=$(find . -path '*/sona-bundle/bundle.zip' -type f | head -1)
+          if [ -z "$bundle" ]; then echo "::error::sonaBundle wrote no bundle.zip"; find . -name '*.zip' -path '*target*' | head; exit 1; fi
+          echo "bundle: $bundle ($(du -h "$bundle" | cut -f1))"
+          # The three modules and nothing else: a fourth would be a name on Central for good.
+          modules="$(unzip -Z1 "$bundle" | grep '\.pom$' | sed 's|.*/\(ankka-reasoning-[a-z]*\)_3-.*|\1|' | sort | tr '\n' ' ')"
+          [ "$modules" = "ankka-reasoning-belief ankka-reasoning-graph ankka-reasoning-market " ] || { echo "::error::the bundle holds '$modules'"; unzip -Z1 "$bundle"; exit 1; }
+          version="${GITHUB_REF_NAME#v}"
+          token=$(printf '%s:%s' "$SONATYPE_USERNAME" "$SONATYPE_PASSWORD" | base64 | tr -d '\n')
+          # AUTOMATIC: validated, then published, by the portal. The answer is the deployment id;
+          # anything but a 201 is the failure, with the portal's own message.
+          code=$(curl -sS -o upload.out -w '%{http_code}' \
+            -H "Authorization: Bearer $token" \
+            -F "bundle=@$bundle" \
+            "https://central.sonatype.com/api/v1/publisher/upload?publishingType=AUTOMATIC&name=ankka-reasoning-$version" || true)
+          echo "portal answered $code: $(cat upload.out)"
+          [ "$code" = "201" ] || exit 1
+          deployment=$(cat upload.out)
+          echo "::notice::$version uploaded as deployment $deployment; the portal publishes it and repo1 follows in minutes to an hour"
+          # One look, not a wait: the state right now, for the log.
+          curl -sS -o status.out -w '%{http_code}\n' -H "Authorization: Bearer $token" -X POST \
+            "https://central.sonatype.com/api/v1/publisher/status?id=$deployment" || true
+          cat status.out; echo
+
+  image:
+    # The service's image to GitHub Container Registry, tagged with the release version and
+    # `latest`, pushed with the workflow's own token. The image carries
+    # org.opencontainers.image.source naming this repository (build.sbt), which links the package to
+    # it. Then the two files a deployment of this version starts from are attached to the release:
+    # the service descriptor, naming this image and the ankka version it was built against, and the
+    # pipeline's blueprint.
+    if: ${{ !contains(github.ref_name, '-') }}
+    needs: release-page
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write   # the release's assets
+      packages: write   # the image, to this repository's packages on ghcr.io
+    env:
+      DOCKER_REPOSITORY: ghcr.io/thinkmorestupidless
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # dynver needs the tags: Docker / version is the release version
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: sbt
+      - uses: sbt/setup-sbt@v1
+      - name: The version comes from a clean tree, or not at all
+        run: |
+          git update-index -q --refresh
+          git diff-index --quiet HEAD -- || { echo "::error::working tree is dirty"; git status --porcelain; exit 1; }
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push the image, and render the descriptor that names it
+        run: sbt service/Docker/publish deployDescriptors
+      - name: The image pushed is the tag's, and the descriptor names it
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          image="$DOCKER_REPOSITORY/ankka-reasoning:$version"
+          # Built under any other version, this tag would not exist in the local daemon.
+          docker image inspect "$image" --format '{{.Id}}'
+          docker manifest inspect "$image" >/dev/null
+          grep -n "\"image\": \"$image\"" target/deploy/service.json || { echo "::error::the descriptor does not name $image"; cat target/deploy/service.json; exit 1; }
+      - name: Attach the descriptor and the blueprint to the tag's release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          # Where the broker and the graph database are is the cluster's to say, so those two
+          # placeholders are left in; the deploy page says how they are filled.
+          cp target/deploy/service.json "$RUNNER_TEMP/ankka-reasoning-$version-service.json"
+          cp deploy/pipeline/blueprint.conf "$RUNNER_TEMP/ankka-reasoning-$version-blueprint.conf"
+          gh release upload "$GITHUB_REF_NAME" \
+            "$RUNNER_TEMP/ankka-reasoning-$version-service.json" \
+            "$RUNNER_TEMP/ankka-reasoning-$version-blueprint.conf" \
+            --clobber
+
+  marketplace:
+    # The Claude Code marketplace is thinkmorestupidless/ankka-marketplace, one plugin per project.
+    # This job clones it, replaces `plugins/ankka-reasoning/` with the rendered plugin, writes this
+    # project's entry into the manifest's `plugins` list without touching the others, and pushes an
+    # ordinary commit — never a force push, which would erase the other projects' plugins. The
+    # manifest's name, owner and description, and the README, are ankka's, published by ankka's own
+    # release.
+    #
+    # Needs `MARKETPLACE_REPO_TOKEN`: a token with contents:write on ankka-marketplace, because the
+    # workflow's own token has no access to another repository.
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # With credentials persisted, git would use the workflow's own token for every github.com
+          # URL and the push below would authenticate as github-actions[bot] and be refused.
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          python-version: "3.12"
+      # The committed plugin must be the one the pages render to: a stale plugin is a failed
+      # release, not a stale marketplace.
+      - run: uv run --project tools/docs docs check
+      - env:
+          MARKETPLACE_REPO_TOKEN: ${{ secrets.MARKETPLACE_REPO_TOKEN }}
+        run: |
+          set -euo pipefail
+          [ -n "$MARKETPLACE_REPO_TOKEN" ] || { echo "::error::the secret MARKETPLACE_REPO_TOKEN is not set: a token with contents:write on thinkmorestupidless/ankka-marketplace"; exit 1; }
+          version="${GITHUB_REF_NAME#v}"
+          remote="https://x-access-token:${MARKETPLACE_REPO_TOKEN}@github.com/thinkmorestupidless/ankka-marketplace.git"
+          # The plugin's version is the release whose documentation it carries: 0.0.0 in the tree,
+          # written here, so no tracked file is rewritten by the build.
+          sed -i "s/\"version\": \"0.0.0\"/\"version\": \"$version\"/" marketplace/plugins/ankka-reasoning/.claude-plugin/plugin.json
+          grep -n "\"version\": \"$version\"" marketplace/plugins/ankka-reasoning/.claude-plugin/plugin.json
+          git clone --depth 1 "$remote" "$RUNNER_TEMP/marketplace"
+          cd "$RUNNER_TEMP/marketplace"
+          git config user.name "ankka-reasoning release"
+          git config user.email "release@ankka-reasoning.invalid"
+          rm -rf plugins/ankka-reasoning
+          mkdir -p plugins
+          cp -R "$GITHUB_WORKSPACE/marketplace/plugins/ankka-reasoning" plugins/ankka-reasoning
+          # The entry is the plugin's own manifest, as the marketplace lists it; every other entry is
+          # another project's and is kept as found. The list is sorted so the file is the same
+          # whichever project released last.
+          entry="$(jq -c '{name, source: ("./plugins/" + .name), description, version}' plugins/ankka-reasoning/.claude-plugin/plugin.json)"
+          jq --argjson entry "$entry" \
+            '.plugins = ([.plugins[] | select(.name != $entry.name)] + [$entry] | sort_by(.name))' \
+            .claude-plugin/marketplace.json > "$RUNNER_TEMP/manifest.json"
+          mv "$RUNNER_TEMP/manifest.json" .claude-plugin/marketplace.json
+          jq . .claude-plugin/marketplace.json
+          git add -A
+          # A re-run of the tag finds the marketplace already holding this version: nothing to
+          # commit, and that is success.
+          if git diff --cached --quiet; then
+            echo "the marketplace already holds ankka-reasoning $version"
+          else
+            git commit -m "ankka-reasoning $version"
+            # Another project's release may have pushed since the clone; rebase onto it and try again.
+            for attempt in 1 2 3; do
+              git push "$remote" HEAD:main && break
+              [ "$attempt" = 3 ] && exit 1
+              git pull --rebase "$remote" main
+            done
+          fi
+          git tag -f "ankka-reasoning-${GITHUB_REF_NAME}"
+          git push --force "$remote" "ankka-reasoning-${GITHUB_REF_NAME}"

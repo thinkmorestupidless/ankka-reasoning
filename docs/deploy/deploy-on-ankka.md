@@ -79,18 +79,27 @@ flow generate deploy/pipeline/blueprint.conf --conf deploy/pipeline/kind.conf -n
 
 The sink's consumer group is `reasoning-graph.graph.in`.
 
-## Build the image and the descriptor
+## Get the image and the descriptor
+
+Each release publishes the service's image to `ghcr.io/thinkmorestupidless/ankka-reasoning:<version>`
+and attaches two files to its page on GitHub: `ankka-reasoning-<version>-service.json`, the service
+descriptor naming that image and the ankka version it was built against, and
+`ankka-reasoning-<version>-blueprint.conf`, the pipeline's blueprint. No version has been released
+yet, so for now both are built from the repository.
+
+To build them from a checkout:
 
 ```bash
 just images
 REASONING_DEPLOY_KAFKA=<broker host:port> REASONING_DEPLOY_NEO4J_URI=<bolt address> just descriptors
 ```
 
-`just images` publishes the image `reasoning:<version>` to the local Docker daemon; set
+`just images` publishes the image `ankka-reasoning:<version>` to the local Docker daemon; set
 `DOCKER_REPOSITORY` to prefix it with a registry, and push it wherever the cluster pulls from.
 `just descriptors` writes `target/deploy/service.json` with the image, the ankka version the service
 was built against, the broker and the graph database's address filled in. A value that is not set is
-left in the file as a placeholder and the command says so.
+left in the file as a placeholder and the command says so; the descriptor a release attaches has the
+broker and the graph database left that way, for the deployment to fill in.
 
 The descriptor, before it is filled in:
 

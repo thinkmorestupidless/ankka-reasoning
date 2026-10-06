@@ -11,7 +11,34 @@ ThisBuild / scalaVersion  := V.scala
 ThisBuild / organization  := "com.thinkmorestupidless"
 ThisBuild / versionScheme := Some("early-semver")
 ThisBuild / licenses := List("Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0"))
-// No `ThisBuild / version`: sbt-dynver derives it from the nearest tag.
+ThisBuild / homepage := Some(url("https://reasoning.ankka.cloud/"))
+ThisBuild / scmInfo := Some(
+  ScmInfo(
+    url("https://github.com/thinkmorestupidless/ankka-reasoning"),
+    "scm:git:https://github.com/thinkmorestupidless/ankka-reasoning.git"
+  )
+)
+ThisBuild / developers := List(
+  Developer(
+    "thinkmorestupidless",
+    "Trevor Burton-McCreadie",
+    "",
+    url("https://github.com/thinkmorestupidless")
+  )
+)
+// No `ThisBuild / version`: sbt-dynver derives it from the nearest tag (`v0.1.0` is 0.1.0; a commit
+// past it or a dirty tree is a -SNAPSHOT). Setting it anywhere silently overrides the tag, which is
+// the one thing a release must not do.
+
+// The local proof of the release path: `-Dreasoning.release.local=<dir>` points `publish` and
+// `publishSigned` at a Maven-layout directory in place of the Central Portal, so the published
+// modules, their sources, documentation and POMs can be looked at before anything is public.
+ThisBuild / publishTo := sys.props
+  .get("reasoning.release.local")
+  .map(dir =>
+    Resolver.file("local-release", file(dir))(Patterns(true, Resolver.mavenStyleBasePattern))
+  )
+  .orElse((ThisBuild / publishTo).value)
 
 // Suites that start containers contend when they overlap. Do not undo it.
 Global / concurrentRestrictions += Tags.limit(Tags.Test, 1)
@@ -26,37 +53,48 @@ lazy val common = Seq(
   publish / skip              := true
 )
 
+// The three layers are libraries as well as parts of the service: another ankka application can
+// compose the belief layer, or both, into a service of its own. They are what a release publishes
+// to Maven Central. The service is published as an image, and `seed` not at all.
+lazy val published = Seq(publish / skip := false)
+
 lazy val graph = project
   .in(file("modules/graph"))
   .settings(common)
   .settings(
-    name := "reasoning-graph",
+    name := "ankka-reasoning-graph",
+    description := "The vocabulary of a reasoning graph as a value, and the reader of the graph database.",
     libraryDependencies ++= Seq(ankkaSdk, neo4jDriver)
   )
+  .settings(published)
 
 lazy val belief = project
   .in(file("modules/belief"))
   .dependsOn(graph)
   .settings(common)
   .settings(
-    name := "reasoning-belief",
+    name := "ankka-reasoning-belief",
+    description := "The belief layer of ankka-reasoning: its records, rules, graph consumers, answers and routes.",
     libraryDependencies ++= Seq(ankkaSdk, ankkaRuntime, ankkaHttp, ankkaTestkit % Test)
   )
+  .settings(published)
 
 lazy val market = project
   .in(file("modules/market"))
   .dependsOn(belief)
   .settings(common)
   .settings(
-    name := "reasoning-market",
+    name        := "ankka-reasoning-market",
+    description := "The market layer of ankka-reasoning, built on the belief layer.",
     libraryDependencies ++= Seq(ankkaSdk, ankkaRuntime, ankkaHttp, ankkaTestkit % Test)
   )
+  .settings(published)
 
 lazy val seed = project
   .in(file("modules/seed"))
   .settings(common)
   .settings(
-    name := "reasoning-seed",
+    name := "ankka-reasoning-seed",
     libraryDependencies += ujson,
     run / fork          := true,
     run / baseDirectory := (ThisBuild / baseDirectory).value
@@ -91,12 +129,22 @@ lazy val service = project
       s"-Dreasoning.neo4j.image=${sys.props.getOrElse("reasoning.neo4j.image", V.neo4jImage)}",
       s"-Dreasoning.sink.image=${sys.props.getOrElse("reasoning.sink.image", V.sinkImage)}"
     ),
-    Docker / packageName      := "reasoning",
+    // The image is named for the repository, since a registry is shared; the service it runs is
+    // still `reasoning`.
+    Docker / packageName      := "ankka-reasoning",
     Docker / dockerRepository := sys.env.get("DOCKER_REPOSITORY"),
-    Docker / version          := version.value.replace('+', '-'),
-    dockerBaseImage           := "eclipse-temurin:21-jre",
-    dockerUpdateLatest        := true,
-    dockerExposedPorts        := Seq(9000)
+    // A Docker tag may not contain '+', and a dynver snapshot version does.
+    Docker / version := version.value.replace('+', '-'),
+    dockerLabels ++= Map(
+      // Names this repository, which is what links the package on ghcr.io to it.
+      "org.opencontainers.image.source" -> "https://github.com/thinkmorestupidless/ankka-reasoning",
+      "org.opencontainers.image.licenses" -> "Apache-2.0",
+      "org.opencontainers.image.title"    -> "ankka-reasoning",
+      "org.opencontainers.image.description" -> "The ankka-reasoning service: a reasoning graph on ankka."
+    ),
+    dockerBaseImage    := "eclipse-temurin:21-jre",
+    dockerUpdateLatest := true,
+    dockerExposedPorts := Seq(9000)
   )
 
 lazy val root = project
@@ -127,12 +175,14 @@ schema := {
 
 // deploy/service.json with the image and the ankka version written in, into target/deploy. Where
 // the broker and the graph database are is the cluster's to say: REASONING_DEPLOY_KAFKA and
-// REASONING_DEPLOY_NEO4J_URI, and a placeholder left in is said so.
+// REASONING_DEPLOY_NEO4J_URI, and a placeholder left in is said so. A release attaches the file,
+// with those two left in, to its page.
 lazy val deployDescriptors = taskKey[File]("Renders deploy/service.json into target/deploy")
 deployDescriptors := {
-  val log   = streams.value.log
-  val out   = (ThisBuild / baseDirectory).value / "target" / "deploy"
-  val image = s"reasoning:${(service / Docker / version).value}"
+  val log = streams.value.log
+  val out = (ThisBuild / baseDirectory).value / "target" / "deploy"
+  // The image as `service/Docker/publish` names it: with the registry in DOCKER_REPOSITORY, if any.
+  val image = (service / Docker / dockerAlias).value.toString
   IO.createDirectory(out)
   val places = Seq(
     "${IMAGE}"         -> Some(image),

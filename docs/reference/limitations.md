@@ -25,8 +25,9 @@ deliberate. Each entry says how the system behaves today, so a reader can plan r
 - **Nothing checks that probabilities add up.** A belief is one holder's probability for one
   hypothesis. A holder's probabilities for the hypotheses of one question are not required to sum
   to one.
-- **No release.** There is no published image, artifact or version. The service is built from the
-  repository.
+- **No version has been released.** A release publishes the service's image, the three layers as
+  libraries and the documentation as a plugin, and none has been made. Until one is, the service
+  is built from the repository.
 
 ## What is unproven
 

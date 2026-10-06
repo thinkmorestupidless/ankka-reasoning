@@ -17,7 +17,8 @@ read `family.md` and `repos/ankka-reasoning.md` there before cross-repo work.
 
 ## Modules
 
-`graph` ← `belief` ← `market` ← `service`, and `seed` apart. The direction is the layering: a
+`graph` ← `belief` ← `market` ← `service`, and `seed` apart. The first three are published as
+libraries (`ankka-reasoning-graph`, `-belief`, `-market`); `service` is published as an image. The direction is the layering: a
 market word in `belief` does not compile. `service` composes the layers and holds every suite that
 needs the whole service. `seed` is a client over HTTP and depends on none of them.
 
@@ -61,6 +62,17 @@ touching the skill, a page or `application.conf`, and commit what it renders und
 A page tells no history: no `specs/` paths, no feature, requirement or task numbers. Every reply
 shown on a page is the service's real output for the launch example; `docs/contributing/documentation.md`
 has the rest.
+
+## Release
+
+Push a `v*` tag from `main`; only a tag publishes anything, and `.github/workflows/release.yml` is
+the whole of it: the three layer modules to Maven Central, the image to
+`ghcr.io/thinkmorestupidless/ankka-reasoning`, the plugin to ankka-marketplace, and a release page
+with the descriptor and blueprint attached. A tag with a hyphen is a pre-release and gets the page
+only. The version comes from the tag through sbt-dynver: never set `version` in the build, and
+never write the version into a tracked file (the plugin's `0.0.0` is rewritten by the release job).
+Published names are immutable and a version cannot be replaced: never re-tag, never publish by
+hand. `docs/contributing/releasing.md` has the checks and the secrets.
 
 ## Rules
 
