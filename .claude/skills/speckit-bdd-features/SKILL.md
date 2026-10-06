@@ -1,0 +1,1 @@
+../../../.specify/extensions/bdd/.specify-dev/agent-commands/claude/speckit-bdd-features/SKILL.md
