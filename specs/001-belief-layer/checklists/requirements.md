@@ -40,3 +40,7 @@
   rather than the time it was recorded.
 - Every glossary term is still *Proposed.*; `/speckit-clarify` settles them.
 - `speckit-bdd check` reports no findings over 99 scenarios and this spec.
+- After clarification on 2026-10-06 (five questions): beliefs are independent; as-of reads go by
+  date or by time recorded; a holder is written for only by the writers that speak for it; the text
+  of evidence or of a claim can be withdrawn (User Story 7, FR-034 to FR-037); and all glossary
+  terms are settled but eight. `speckit-bdd check` reports no findings over 118 scenarios.

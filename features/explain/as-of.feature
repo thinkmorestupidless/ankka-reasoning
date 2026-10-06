@@ -1,7 +1,8 @@
 Feature: What was believed at a past time
   A reader asks what a holder believed as of a past time and is given the belief revision that was
   current then, the claims it rested on and the evidence that had been observed, with nothing dated
-  later.
+  later. Asked as recorded by a past time instead, the reader is given only what had been recorded
+  by then, and that answer never changes.
 
   Background:
     Given the launch example
@@ -34,3 +35,14 @@ Feature: What was believed at a past time
     When a reader asks what was learned about the question after "4 May"
     Then the evidence is in the answer, dated "5 May"
     And the answer says the evidence was recorded on "20 May"
+
+  Scenario: an answer as recorded by a past time holds only what was recorded by then
+    Given evidence dated "5 May" and recorded on "20 May", with a claim derived from it dated "5 May"
+    When a reader asks what was learned about the question after "4 May", as recorded by "12 May"
+    Then the evidence is not in the answer
+    And the claim derived from it is not in the answer
+
+  Scenario: an answer as recorded by a past time never changes
+    Given the answer to what was learned about the question after "4 May", as recorded by "12 May"
+    When a writer records evidence dated "5 May", and today is "20 May"
+    Then a reader who asks again, as recorded by "12 May", is given the same answer

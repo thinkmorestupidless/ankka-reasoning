@@ -64,6 +64,12 @@ Feature: Beliefs and their revisions
     Then one is held and the other writer is refused, naming the current belief revision
     And the belief has two belief revisions
 
+  Scenario: a belief revision from a writer who does not speak for its holder is refused
+    Given a writer who does not speak for the holder
+    When that writer states a belief as the holder
+    Then the writer is refused, naming the holder
+    And the belief has no belief revision
+
   Scenario: a belief revision sent twice is one belief revision
     Given the holder's belief with one belief revision
     When the writer sends the same belief revision again

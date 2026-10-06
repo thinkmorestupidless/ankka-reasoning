@@ -17,7 +17,7 @@ conventions and cross-repo decisions are in `../ankka-brain`; read `family.md` a
 
 | Rule | What it means here |
 |---|---|
-| Nothing is edited | A record is never changed or removed once held. Thinking again is a new record linked to the earlier one. |
+| Nothing is edited | A record is never changed or removed once held. Thinking again is a new record linked to the earlier one. The one exception: the text of evidence or of a claim can be withdrawn, and the record, its links and its dates stay. |
 | Rules are checked on the write side | Whether a record may be held is decided from the service's own records. The graph database lags and is for reading only. |
 | A link has one owner | Every link is stated by one record, the newer of the two, and published with it. No node or edge has two writers. |
 | Links point backwards | A record links only to records already held and dated no later than itself. Cycles cannot be made, so nothing checks for them. |

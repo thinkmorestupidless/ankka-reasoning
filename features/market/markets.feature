@@ -10,6 +10,7 @@ Feature: A market beside the reasoning
     When a writer opens a market about the question on the venue "Example Exchange", with the outcome "YES" for "it launches this year" and the outcome "NO" for "it does not launch this year", its resolution criteria and its closing time
     Then the market is held with its venue, its outcomes, its resolution criteria and its closing time
     And the market is registered as a holder of kind "market"
+    And that writer speaks for the market
 
   Scenario: an outcome is for a hypothesis of the market's question
     When a writer opens a market about the question with an outcome for a hypothesis of another question
@@ -30,6 +31,13 @@ Feature: A market beside the reasoning
     Given a market whose current price observation for the outcome "YES" is "0.48"
     When a writer records a price observation of "0.48" for the outcome "YES"
     Then the market's belief has the belief revisions it had
+
+  Scenario: a price observation from a writer who does not speak for the market is refused
+    Given a market about the question
+    And a writer who does not speak for the market
+    When that writer records a price observation of "0.48" for the outcome "YES"
+    Then the writer is refused, naming the market
+    And the market's belief has no belief revision
 
   Scenario: a price observation for an outcome the market does not offer is refused
     Given a market about the question

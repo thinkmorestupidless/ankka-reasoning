@@ -80,7 +80,9 @@ Five rules do most of the work. Each one removes a problem instead of handling i
 
 - **Nothing is edited.** A holder who thinks again states a new record linked to the old one: a
   claim that revises a claim, a belief revision that follows the one before. History is not
-  reconstructed, because it was never overwritten.
+  reconstructed, because it was never overwritten. The one exception is text that has to come out:
+  the excerpt of a piece of evidence or the statement of a claim can be withdrawn for good, and the
+  record, its links and its dates stay, so every trace through it still holds.
 - **Links point backwards.** A record may link only to records that are already held and dated no
   later than itself. A cycle cannot be made, so nothing has to check for one, and no record can
   rest on something that had not happened yet.

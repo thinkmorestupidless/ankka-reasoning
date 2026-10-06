@@ -16,6 +16,12 @@ Feature: Resolving a market
     Then the writer is refused, naming the rule
     And the market has no resolution
 
+  Scenario: a resolution from a writer who does not speak for the market is refused
+    Given a writer who does not speak for the market
+    When that writer resolves the market to the outcome "YES", on that evidence
+    Then the writer is refused, naming the market
+    And the market has no resolution
+
   Scenario: a market may be resolved as void
     When a writer resolves the market as void, on that evidence
     Then the resolution is held with no outcome

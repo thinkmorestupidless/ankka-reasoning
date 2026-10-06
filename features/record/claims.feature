@@ -65,6 +65,12 @@ Feature: Claims
     Then the writer is refused
     And the claim reads as it was stated
 
+  Scenario: a claim from a writer who does not speak for its holder is refused
+    Given a writer who does not speak for the holder
+    When that writer states a claim as the holder
+    Then the writer is refused, naming the holder
+    And no claim is held
+
   Scenario: a claim sent twice is one claim
     Given a claim the holder stated
     When the writer sends the same claim again
