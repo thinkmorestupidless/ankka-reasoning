@@ -82,7 +82,11 @@ jobs:
           git update-index -q --refresh
           git diff-index --quiet HEAD -- || { echo "::error::working tree is dirty; dynver would build a -SNAPSHOT, not a release"; git status --porcelain; exit 1; }
           version="${GITHUB_REF_NAME#v}"
-          built="$(sbt -batch -error 'print graph/version' | tail -1 | tr -d '[:space:]')"
+          # sbt ends its output with a terminal escape and no newline, even to a pipe, so the last
+          # line is not the version: the escapes are taken out and the line that is shaped like a
+          # version is the one read. v0.1.0 published no libraries because this read the escape.
+          built="$(sbt -batch -error -Dsbt.log.noformat=true -Dsbt.supershell=false 'print graph/version' </dev/null \
+            | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' | tr -d '\r' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+' | tail -1 | tr -d '[:space:]' || true)"
           [ "$built" = "$version" ] || { echo "::error::the build's version is '$built', not the tag's '$version'"; exit 1; }
       # A version on Central cannot be replaced, and the portal refuses one it already holds. A
       # re-run of the tag therefore asks repo1 first and uploads nothing a second time.
