@@ -1,4 +1,7 @@
-# ankka-reasoning
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/brand/ankka-reasoning-lockup-white.png">
+  <img src="docs/assets/brand/ankka-reasoning-lockup-black.png" alt="ankka-reasoning" width="400">
+</picture>
 
 A reasoning graph on [ankka](https://github.com/thinkmorestupidless/ankka): a record of how beliefs
 form and change. Evidence is kept with where it came from, claims are derived from evidence,
