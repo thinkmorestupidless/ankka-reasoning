@@ -1,7 +1,6 @@
 # Glossary
 
-The words this project's features use, each in exactly one sense. A term marked *Proposed.* has
-still to be settled by `/speckit-clarify`.
+The words this project's features use, each in exactly one sense.
 
 ## Records
 
@@ -12,7 +11,7 @@ once it is held, except that its text may be withdrawn.
 Avoid: object, entity, item
 
 ### held
-*Proposed.* Accepted by the service and kept. A record that is held can be read back as it was
+Accepted by the service and kept. A record that is held can be read back as it was
 stated, for as long as the service runs.
 Avoid: stored, saved, persisted
 
@@ -21,7 +20,7 @@ Whoever sends records to the service: a person, a program, and later an agent. T
 service knows which writer sent each record and keeps it with the record.
 
 ### speaks for
-*Proposed.* Of a writer and a holder: allowed to state claims, beliefs and, for a market, price
+Of a writer and a holder: allowed to state claims, beliefs and, for a market, price
 observations and resolutions as that holder. The writer who registers a holder speaks for it and
 may add others.
 
@@ -40,7 +39,7 @@ A condition a record must meet to be held, such as naming only records that are 
 Of a holder or a source: held, so that later records may name it.
 
 ### dated
-*Proposed.* The time a record says it holds from: the time evidence was observed, or the time a
+The time a record says it holds from: the time evidence was observed, or the time a
 claim, a belief revision or a resolution was stated. The writer gives it; left out, it is the time
 the record was recorded. It is never later than the time the record was recorded.
 Avoid: timestamp, effective time
@@ -50,11 +49,11 @@ Of a record: accepted by the service. The time a record was recorded is set by t
 service and never by the writer.
 
 ### steward
-*Proposed.* A writer the deployment names, who may withdraw the text of any evidence or claim,
+A writer the deployment names, who may withdraw the text of any evidence or claim,
 whoever sent it.
 
 ### withdrawn
-*Proposed.* Of evidence or a claim: with its text taken out for good. The excerpt, author and
+Of evidence or a claim: with its text taken out for good. The excerpt, author and
 locator of evidence, or the statement of a claim, are no longer held anywhere; the record, its
 links, its dates, the note, the writer who withdrew it and the time stay.
 Avoid: deleted, redacted, erased
@@ -84,7 +83,7 @@ Something not yet known that the reasoning is about, stated as a sentence.
 One of the answers that compete for a question. A question has at least two.
 
 ### holder
-*Proposed.* Whoever holds a belief or states a claim: an agent, a person, a model, and in the
+Whoever holds a belief or states a claim: an agent, a person, a model, and in the
 market layer a market.
 Avoid: forecaster, participant, actor
 
@@ -137,7 +136,7 @@ A stance: the claim makes the hypothesis more likely.
 A stance: the claim makes the hypothesis less likely.
 
 ### revises
-*Proposed.* The link from a claim to an earlier claim it replaces, or from a resolution to an
+The link from a claim to an earlier claim it replaces, or from a resolution to an
 earlier resolution it replaces. The earlier record is kept.
 Avoid: supersedes, updates, corrects
 
@@ -156,7 +155,7 @@ A belief's revisions form one line, each following the one before.
 A number from nought to one saying how likely a holder takes a hypothesis to be.
 
 ### rests on
-*Proposed.* The link from a belief revision to each claim the holder gives as a reason for it.
+The link from a belief revision to each claim the holder gives as a reason for it.
 
 ### weight
 A number from nought to one a belief revision may give a claim it rests on, saying how
@@ -188,7 +187,7 @@ that contradict it.
 Reading the records as they stood at a past time: only records dated at or before it.
 
 ### as recorded by
-*Proposed.* Reading the records the service held at a past time: only records recorded at or
+Reading the records the service held at a past time: only records recorded at or
 before it. Unlike a reading as of a time, it never changes afterwards.
 
 ### learned

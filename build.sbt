@@ -10,6 +10,7 @@ import Dependencies.*
 ThisBuild / scalaVersion  := V.scala
 ThisBuild / organization  := "com.thinkmorestupidless"
 ThisBuild / versionScheme := Some("early-semver")
+ThisBuild / licenses := List("Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0"))
 // No `ThisBuild / version`: sbt-dynver derives it from the nearest tag.
 
 // Suites that start containers contend when they overlap. Do not undo it.

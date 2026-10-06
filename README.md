@@ -176,3 +176,7 @@ it is expected:
 ankka-reasoning is an application of both and part of neither. ankka supplies the entities, the
 graph consumers and, later, the agents. ankka-flow supplies the delta contract and the merge sink.
 What this project finds missing in either becomes a request to it.
+
+## Licence
+
+[Apache 2.0](LICENSE), as ankka and ankka-flow are.

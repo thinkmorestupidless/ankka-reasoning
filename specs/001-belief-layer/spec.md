@@ -63,6 +63,7 @@ they will be writers like any other.
 - Q: How should this feature treat content that later has to be taken out of a record? → A: Withdraw the content. The text of evidence or of a claim can be withdrawn for good while the record, its links, its dates and the fact of withdrawal stay. It is the one exception to nothing being edited.
 - Planning, same day: the wait in FR-020 covers a record's edges as well as its node, since the two reach the graph separately; and FR-034 gains a steward, a writer the deployment names who may withdraw the text of any record, so that text can come out when its writer is gone. `steward` joins the glossary as a ninth term still proposed.
 - Q: How are the glossary's proposed terms settled? → A: All settled as written except eight, which stay proposed until they have been used for a while: holder, held, dated, revises, withdrawn, speaks for, rests on, as recorded by.
+- After implementation, same day: the terms that had stayed proposed (holder, held, dated, revises, withdrawn, speaks for, rests on, as recorded by, steward) are accepted as written, and no term in the glossary is proposed.
 
 ## User Scenarios & Testing *(mandatory)*
 
