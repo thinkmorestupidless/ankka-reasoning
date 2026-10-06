@@ -1,0 +1,75 @@
+# What a cluster would supply, for a laptop: Postgres for the service, Kafka with the delta topic
+# created compacted, Neo4j, and ankka-flow's sidecar running the built-in merge sink.
+# Run `sbt schema` first so target/ddl holds ankka's schema for Postgres' init directory; `just up`
+# does both. The service itself runs on the host: `just run`.
+# Where port 5432 is taken, REASONING_POSTGRES_PORT moves Postgres for `just up` and `just run` both.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ankka
+      POSTGRES_PASSWORD: ankka
+      POSTGRES_DB: ankka
+    ports:
+      - "${REASONING_POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ./target/ddl:/docker-entrypoint-initdb.d:ro
+  kafka:
+    image: apache/kafka:3.9.1
+    ports:
+      - "9094:9094"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      # ankka creates no topics, and a topic created on first use would not be compacted.
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+  # Run once: the delta topic, compacted, as the pipeline's operator would create it in a cluster.
+  topic:
+    image: apache/kafka:3.9.1
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists
+        --topic reasoning-graph --partitions 3 --replication-factor 1
+        --config cleanup.policy=compact --config max.compaction.lag.ms=86400000
+  neo4j:
+    image: neo4j:5.26-community
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: neo4j/reasoning-local-password
+  sink:
+    image: ${REASONING_SINK_IMAGE:-ghcr.io/thinkmorestupidless/ankka-flow-sidecar:0.3.0}
+    depends_on:
+      topic:
+        condition: service_completed_successfully
+      neo4j:
+        condition: service_started
+    environment:
+      FLOW_CONFIG_DIR: /etc/flow/config
+    volumes:
+      - ./compose/flow-graph:/etc/flow/config:ro
+      # What the operator mounts from the connection Secret in a cluster: one file per key.
+      - ./compose/neo4j-secret:/etc/flow/neo4j:ro
+    ports:
+      - "2051:2050"

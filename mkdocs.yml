@@ -1,0 +1,117 @@
+# The documentation site. The source is docs/, plain Markdown with YAML frontmatter; this file says how
+# MkDocs renders it for people and, under `extra.docs`, what ankka's docs tool needs to know about this
+# repository. Everything machine-facing — llms.txt, llms-full.txt, raw Markdown per page,
+# docs-index.json and the agent skill — is rendered from the same tree by
+# `uv run --project tools/docs docs build`. See docs/contributing/documentation.md.
+site_name: ankka-reasoning
+site_description: A reasoning graph on ankka — evidence, claims, hypotheses and beliefs as records that are never edited, published to a graph database, so any belief can be traced to its sources and read back as it stood on any past day.
+site_url: https://reasoning.ankka.cloud/
+repo_url: https://github.com/thinkmorestupidless/ankka-reasoning
+repo_name: thinkmorestupidless/ankka-reasoning
+edit_uri: edit/main/docs/
+docs_dir: docs
+site_dir: target/docs-site
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+theme:
+  name: material
+  logo: assets/brand/ankka-reasoning-mark-white-256.png
+  favicon: assets/brand/favicon.png
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+    - content.tabs.link
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: black
+      accent: deep orange
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: deep orange
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+
+# Deliberately plain, as ankka's pages are: no admonitions, no snippet syntax. A page must read
+# correctly with no renderer at all, because that is how a model most often receives it. The one
+# exception is `pymdownx.blocks.tab`, for a page that shows the same thing in more than one language.
+markdown_extensions:
+  - toc:
+      permalink: true
+  - tables
+  - pymdownx.highlight:
+      anchor_linenums: false
+  - pymdownx.superfences
+  - pymdownx.blocks.tab:
+      alternate_style: true
+
+extra:
+  generator: false
+  # What ankka's docs tool needs to know about this repository. The tool is ankka's; the rules are on
+  # docs/contributing/documentation.md.
+  docs:
+    facets:
+      layers: [belief, market]
+    skills:
+      source: tools/docs/skill
+      targets:
+        - path: marketplace/plugins/ankka-reasoning/skills
+    generated:
+      configuration:
+        kind: hocon
+        files:
+          - { path: modules/service/src/main/resources/application.conf, scope: service }
+        prefix: reasoning.
+        described-on: reference/configuration.md
+    site-links:
+      retired-hosts: []
+      files: [README.md, marketplace/plugins/ankka-reasoning/.claude-plugin/plugin.json]
+
+nav:
+  - Home: index.md
+  - Get started:
+      - Run it on your machine: get-started/run-locally.md
+      - Your first explanation: get-started/first-explanation.md
+  - Concepts:
+      - How ankka-reasoning works: concepts/architecture.md
+      - Records and links: concepts/records-and-links.md
+      - Nothing is edited: concepts/nothing-is-edited.md
+      - Two times on every record: concepts/two-times.md
+      - Layers and the vocabulary: concepts/layers.md
+      - Writers, holders and stewards: concepts/writers-and-holders.md
+  - Build:
+      - Record reasoning: build/record-reasoning.md
+      - Ask for explanations: build/ask-for-explanations.md
+      - Markets and resolutions: build/markets.md
+      - Withdraw text: build/withdraw-text.md
+      - Read the graph: build/read-the-graph.md
+      - Seed files: build/seed-files.md
+  - Deploy and operate:
+      - Deploy on ankka: deploy/deploy-on-ankka.md
+      - Operate the service: deploy/operate.md
+  - Reference:
+      - HTTP API: reference/http-api.md
+      - Refusals: reference/refusals.md
+      - Graph vocabulary: reference/graph-vocabulary.md
+      - Configuration: reference/configuration.md
+      - Limitations: reference/limitations.md
+      - Glossary: reference/glossary.md
+  - Contributing:
+      - Writing documentation: contributing/documentation.md

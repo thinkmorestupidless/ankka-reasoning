@@ -6,3 +6,8 @@ target/
 .DS_Store
 __pycache__/
 .venv/
+.bloop/
+project/project/
+project/target/
+*.log
+.env

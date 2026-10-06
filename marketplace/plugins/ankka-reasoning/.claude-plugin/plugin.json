@@ -1,0 +1,21 @@
+{
+  "name": "ankka-reasoning",
+  "version": "0.0.0",
+  "description": "The ankka-reasoning documentation as a skill — recording evidence, claims and beliefs as records that are never edited, asking why a belief changed or what was believed at a past time, markets and their resolutions, and reading the graph.",
+  "author": {
+    "name": "thinkmorestupidless",
+    "url": "https://github.com/thinkmorestupidless/ankka-reasoning"
+  },
+  "homepage": "https://reasoning.ankka.cloud/",
+  "repository": "https://github.com/thinkmorestupidless/ankka-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "ankka",
+    "ankka-reasoning",
+    "reasoning-graph",
+    "provenance",
+    "beliefs",
+    "prediction-markets",
+    "neo4j"
+  ]
+}

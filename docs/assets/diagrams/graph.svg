@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 770" role="img" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" aria-labelledby="title desc">
+  <title id="title">The kinds of node in the graph</title>
+  <desc id="desc">The kinds of node in the graph and the links between them, in two layers. In the belief layer: a hypothesis answers a question; evidence is from a source; a claim derives from evidence, supports or contradicts a hypothesis, is stated by a holder, and may revise an earlier claim; a belief revision is in a hypothesis with a probability, rests on claims each with an optional weight, is held by a holder, and follows the belief revision before it. In the market layer, above: a market is about a question, offers an outcome for a hypothesis, and speaks as a holder; a resolution is of a market, resolves to a hypothesis, is on evidence, and may revise an earlier resolution. Every arrow is a link stated by the record it leaves and points to a record that was already held. No record is ever edited.</desc>
+  <style>
+    .bg { fill: #ffffff; }
+    .ink { fill: #1f2328; }
+    .muted { fill: #59636e; }
+    .box { fill: #f6f8fa; stroke: #afb8c1; stroke-width: 1.2; }
+    .hot { fill: #fff4ec; stroke: #c2410c; stroke-width: 1.5; }
+    .ns { fill: none; stroke: #8c959f; stroke-width: 1.2; stroke-dasharray: 5 4; }
+    .deploy { fill: none; stroke: #afb8c1; stroke-width: 1.2; stroke-dasharray: 3 3; }
+    .line { stroke: #1f2328; stroke-width: 1.4; fill: none; }
+    .dash { stroke: #59636e; stroke-width: 1.3; fill: none; stroke-dasharray: 4 3; }
+    .head { fill: #1f2328; }
+    .headmuted { fill: #59636e; }
+    text { font-size: 13px; }
+    .title { font-size: 14px; font-weight: 600; }
+    .small { font-size: 11.5px; }
+    .mono { font-size: 11.5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .label { font-size: 11.5px; font-weight: 600; letter-spacing: 0.02em; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d1117; }
+      .ink { fill: #e6edf3; }
+      .muted { fill: #9198a1; }
+      .box { fill: #161b22; stroke: #3d444d; }
+      .hot { fill: #2a1a10; stroke: #ff8a4c; }
+      .ns { stroke: #656c76; }
+      .deploy { stroke: #3d444d; }
+      .line { stroke: #e6edf3; }
+      .dash { stroke: #9198a1; }
+      .head { fill: #e6edf3; }
+      .headmuted { fill: #9198a1; }
+    }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" class="head"/>
+    </marker>
+    <marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" class="headmuted"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="770" rx="12"/>
+
+  <!-- The market layer -->
+  <rect class="ns" x="24" y="40" width="1152" height="164" rx="10"/>
+  <text class="label muted" x="60" y="62">MARKET LAYER</text>
+
+  <rect class="hot" x="96" y="76" width="544" height="96" rx="8"/>
+  <text class="title ink" x="368" y="102" text-anchor="middle">Market</text>
+  <text class="small muted" x="368" y="122" text-anchor="middle">where a question is traded: venue, outcomes, resolution criteria, closing time</text>
+  <text class="small muted" x="368" y="139" text-anchor="middle">it is a holder too: each price observation is its belief revision,</text>
+  <text class="small muted" x="368" y="156" text-anchor="middle">resting on no claims</text>
+
+  <rect class="hot" x="780" y="76" width="300" height="96" rx="8"/>
+  <text class="title ink" x="930" y="102" text-anchor="middle">Resolution</text>
+  <text class="small muted" x="930" y="122" text-anchor="middle">which outcome a market came to, or void,</text>
+  <text class="small muted" x="930" y="139" text-anchor="middle">on what evidence and whose authority</text>
+
+  <line class="line" x1="780" y1="124" x2="642" y2="124" marker-end="url(#a)"/>
+  <text class="small ink" x="711" y="116" text-anchor="middle">of</text>
+  <path class="line" d="M 1080 104 C 1126 104, 1126 144, 1082 144" marker-end="url(#a)"/>
+  <text class="small ink" x="1122" y="128">revises</text>
+
+  <!-- The belief layer -->
+  <rect class="ns" x="24" y="228" width="1152" height="470" rx="10"/>
+  <text class="label muted" x="60" y="250">BELIEF LAYER</text>
+
+  <rect class="box" x="96" y="270" width="180" height="70" rx="8"/>
+  <text class="title ink" x="186" y="298" text-anchor="middle">Question</text>
+  <text class="small muted" x="186" y="318" text-anchor="middle">something not yet known</text>
+
+  <rect class="box" x="356" y="270" width="528" height="70" rx="8"/>
+  <text class="title ink" x="620" y="298" text-anchor="middle">Hypothesis</text>
+  <text class="small muted" x="620" y="318" text-anchor="middle">one of the answers that compete for a question; a question has at least two</text>
+
+  <rect class="box" x="356" y="430" width="220" height="80" rx="8"/>
+  <text class="title ink" x="466" y="458" text-anchor="middle">Belief revision</text>
+  <text class="small muted" x="466" y="478" text-anchor="middle">one holder's probability for</text>
+  <text class="small muted" x="466" y="494" text-anchor="middle">one hypothesis, at one time</text>
+
+  <rect class="box" x="664" y="430" width="220" height="80" rx="8"/>
+  <text class="title ink" x="774" y="458" text-anchor="middle">Claim</text>
+  <text class="small muted" x="774" y="478" text-anchor="middle">a statement a holder</text>
+  <text class="small muted" x="774" y="494" text-anchor="middle">derives from evidence</text>
+
+  <rect class="box" x="972" y="430" width="180" height="80" rx="8"/>
+  <text class="title ink" x="1062" y="458" text-anchor="middle">Evidence</text>
+  <text class="small muted" x="1062" y="478" text-anchor="middle">something observed,</text>
+  <text class="small muted" x="1062" y="494" text-anchor="middle">kept with its provenance</text>
+
+  <rect class="box" x="356" y="598" width="528" height="70" rx="8"/>
+  <text class="title ink" x="620" y="626" text-anchor="middle">Holder</text>
+  <text class="small muted" x="620" y="646" text-anchor="middle">whoever holds a belief or states a claim: an agent, a person, a model, or a market</text>
+
+  <rect class="box" x="972" y="598" width="180" height="70" rx="8"/>
+  <text class="title ink" x="1062" y="626" text-anchor="middle">Source</text>
+  <text class="small muted" x="1062" y="646" text-anchor="middle">where evidence comes from</text>
+
+  <!-- market layer -> belief layer -->
+  <line class="line" x1="186" y1="172" x2="186" y2="268" marker-end="url(#a)"/>
+  <text class="small ink" x="194" y="220">about</text>
+  <line class="line" x1="500" y1="172" x2="500" y2="268" marker-end="url(#a)"/>
+  <text class="small ink" x="508" y="220">offers, with an outcome</text>
+  <line class="line" x1="832" y1="172" x2="832" y2="268" marker-end="url(#a)"/>
+  <text class="small ink" x="840" y="220">resolves to</text>
+  <line class="line" x1="1062" y1="172" x2="1062" y2="428" marker-end="url(#a)"/>
+  <text class="small ink" x="1070" y="220">on</text>
+  <path class="line" d="M 96 124 L 42 124 L 42 633 L 354 633" marker-end="url(#a)"/>
+  <text class="small ink" x="50" y="390">speaks as</text>
+
+  <!-- within the belief layer -->
+  <line class="line" x1="356" y1="305" x2="278" y2="305" marker-end="url(#a)"/>
+  <text class="small ink" x="317" y="297" text-anchor="middle">answers</text>
+
+  <line class="line" x1="466" y1="430" x2="466" y2="342" marker-end="url(#a)"/>
+  <text class="small ink" x="474" y="382">in</text>
+  <text class="small muted" x="474" y="398">probability</text>
+
+  <line class="line" x1="774" y1="430" x2="774" y2="342" marker-end="url(#a)"/>
+  <text class="small ink" x="782" y="382">supports or</text>
+  <text class="small ink" x="782" y="398">contradicts</text>
+
+  <line class="line" x1="576" y1="470" x2="662" y2="470" marker-end="url(#a)"/>
+  <text class="small ink" x="620" y="462" text-anchor="middle">rests on</text>
+  <text class="small muted" x="620" y="487" text-anchor="middle">weight</text>
+
+  <line class="line" x1="884" y1="470" x2="970" y2="470" marker-end="url(#a)"/>
+  <text class="small ink" x="928" y="462" text-anchor="middle">derives from</text>
+
+  <line class="line" x1="466" y1="510" x2="466" y2="596" marker-end="url(#a)"/>
+  <text class="small ink" x="474" y="558">held by</text>
+  <line class="line" x1="774" y1="510" x2="774" y2="596" marker-end="url(#a)"/>
+  <text class="small ink" x="782" y="558">stated by</text>
+  <line class="line" x1="1062" y1="510" x2="1062" y2="596" marker-end="url(#a)"/>
+  <text class="small ink" x="1070" y="558">from</text>
+
+  <path class="line" d="M 356 490 C 310 490, 310 450, 354 450" marker-end="url(#a)"/>
+  <text class="small ink" x="314" y="474" text-anchor="end">follows</text>
+  <path class="line" d="M 840 510 C 840 552, 930 548, 886 498" marker-end="url(#a)"/>
+  <text class="small ink" x="908" y="548">revises</text>
+
+  <text class="small muted" x="600" y="726" text-anchor="middle">Every arrow is a link, stated by the record it leaves and pointing to a record that was already held.</text>
+  <text class="small muted" x="600" y="744" text-anchor="middle">follows and revises point from a newer record to an older one of the same kind. No record is ever edited.</text>
+</svg>

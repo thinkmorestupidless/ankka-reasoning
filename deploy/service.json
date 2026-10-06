@@ -1,0 +1,14 @@
+{
+  "name": "reasoning",
+  "service": {
+    "image": "${IMAGE}",
+    "runtime": "${ANKKA_VERSION}",
+    "env": [
+      { "name": "ANKKA_KAFKA_BOOTSTRAP_SERVERS", "value": "${KAFKA}" },
+      { "name": "REASONING_NEO4J_URI", "value": "${NEO4J_URI}" },
+      { "name": "REASONING_NEO4J_USERNAME", "secretKeyRef": { "name": "reasoning-graph", "key": "username" } },
+      { "name": "REASONING_NEO4J_PASSWORD", "secretKeyRef": { "name": "reasoning-graph", "key": "password" } }
+    ],
+    "resources": { "instanceType": "small", "autoscaling": { "minInstances": 1 } }
+  }
+}
