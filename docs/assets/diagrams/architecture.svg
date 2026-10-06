@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" role="img" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" aria-labelledby="title desc">
+  <title id="title">How ankka-reasoning works</title>
+  <desc id="desc">Writers, a person, a script or a test and later agents, send records to the ankka-reasoning service, which runs in an ankka project. Inside the service, Records holds one entity per record, never edited, and checks every rule against the service's own records; its events are kept in the service's Postgres database. Each change goes to the graph consumers, one per kind of record, which turn each record into a node and each link it stated into an edge and publish them as graph deltas to a compacted delta topic in Kafka under the contract ankka.graph-delta.v1. An ankka-flow pipeline that is the built-in Neo4j merge sink alone reads the topic and merges each delta into the graph database, Neo4j, which is a copy that can be emptied and rebuilt from the topic alone. Readers ask the service's Answers, which query the graph database, read only, and reply with records only. A write never waits for the graph.</desc>
+  <style>
+    .bg { fill: #ffffff; }
+    .ink { fill: #1f2328; }
+    .muted { fill: #59636e; }
+    .box { fill: #f6f8fa; stroke: #afb8c1; stroke-width: 1.2; }
+    .hot { fill: #fff4ec; stroke: #c2410c; stroke-width: 1.5; }
+    .ns { fill: none; stroke: #8c959f; stroke-width: 1.2; stroke-dasharray: 5 4; }
+    .deploy { fill: none; stroke: #afb8c1; stroke-width: 1.2; stroke-dasharray: 3 3; }
+    .line { stroke: #1f2328; stroke-width: 1.4; fill: none; }
+    .dash { stroke: #59636e; stroke-width: 1.3; fill: none; stroke-dasharray: 4 3; }
+    .head { fill: #1f2328; }
+    .headmuted { fill: #59636e; }
+    text { font-size: 13px; }
+    .title { font-size: 14px; font-weight: 600; }
+    .small { font-size: 11.5px; }
+    .mono { font-size: 11.5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .label { font-size: 11.5px; font-weight: 600; letter-spacing: 0.02em; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d1117; }
+      .ink { fill: #e6edf3; }
+      .muted { fill: #9198a1; }
+      .box { fill: #161b22; stroke: #3d444d; }
+      .hot { fill: #2a1a10; stroke: #ff8a4c; }
+      .ns { stroke: #656c76; }
+      .deploy { stroke: #3d444d; }
+      .line { stroke: #e6edf3; }
+      .dash { stroke: #9198a1; }
+      .head { fill: #e6edf3; }
+      .headmuted { fill: #9198a1; }
+    }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" class="head"/>
+    </marker>
+    <marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" class="headmuted"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="640" rx="12"/>
+
+  <!-- Writers and readers -->
+  <rect class="box" x="24" y="120" width="180" height="92" rx="8"/>
+  <text class="title ink" x="114" y="148" text-anchor="middle">Writers</text>
+  <text class="small muted" x="114" y="168" text-anchor="middle">a person, a script, a test</text>
+  <text class="small muted" x="114" y="184" text-anchor="middle">later, agents</text>
+
+  <rect class="box" x="24" y="404" width="180" height="92" rx="8"/>
+  <text class="title ink" x="114" y="432" text-anchor="middle">Readers</text>
+  <text class="small muted" x="114" y="452" text-anchor="middle">why did this belief change?</text>
+  <text class="small muted" x="114" y="468" text-anchor="middle">what did we believe then?</text>
+
+  <!-- The ankka project and the service -->
+  <rect class="ns" x="266" y="40" width="434" height="560" rx="10"/>
+  <text class="small muted" x="278" y="58">an ankka project</text>
+  <rect class="deploy" x="282" y="72" width="402" height="512" rx="8"/>
+  <text class="title ink" x="298" y="96">ankka-reasoning</text>
+  <text class="small muted" x="420" y="96">an ankka service</text>
+
+  <rect class="hot" x="298" y="112" width="226" height="108" rx="8"/>
+  <text class="title ink" x="411" y="138" text-anchor="middle">Records</text>
+  <text class="small muted" x="411" y="158" text-anchor="middle">one entity per record, never edited</text>
+  <text class="small muted" x="411" y="175" text-anchor="middle">every rule is checked here,</text>
+  <text class="small muted" x="411" y="192" text-anchor="middle">against the service's own records</text>
+
+  <rect class="box" x="564" y="128" width="104" height="76" rx="8"/>
+  <text class="title ink" x="616" y="154" text-anchor="middle">Postgres</text>
+  <text class="small muted" x="616" y="174" text-anchor="middle">every record,</text>
+  <text class="small muted" x="616" y="190" text-anchor="middle">as events</text>
+  <line class="line" x1="524" y1="166" x2="562" y2="166" marker-end="url(#a)"/>
+
+  <rect class="hot" x="298" y="268" width="370" height="84" rx="8"/>
+  <text class="title ink" x="483" y="294" text-anchor="middle">Graph consumers</text>
+  <text class="small muted" x="483" y="314" text-anchor="middle">one per kind of record: each record becomes a node,</text>
+  <text class="small muted" x="483" y="331" text-anchor="middle">each link it stated becomes an edge</text>
+  <line class="line" x1="411" y1="220" x2="411" y2="266" marker-end="url(#a)"/>
+  <text class="small ink" x="419" y="248">each change</text>
+
+  <rect class="hot" x="298" y="404" width="370" height="100" rx="8"/>
+  <text class="title ink" x="483" y="430" text-anchor="middle">Answers</text>
+  <text class="small muted" x="483" y="450" text-anchor="middle">why a belief changed · the case for and against</text>
+  <text class="small muted" x="483" y="467" text-anchor="middle">what was believed at a past time · where two disagree</text>
+  <text class="small muted" x="483" y="484" text-anchor="middle">made of records only; nothing is written for the occasion</text>
+
+  <text class="small muted" x="298" y="540">A write never waits for the graph.</text>
+  <text class="small muted" x="298" y="557">An answer is at most a moment behind the records.</text>
+
+  <!-- writers -> records, readers -> answers -->
+  <line class="line" x1="204" y1="166" x2="296" y2="166" marker-end="url(#a)"/>
+  <text class="small ink" x="235" y="158" text-anchor="middle">records</text>
+  <line class="line" x1="204" y1="450" x2="296" y2="450" marker-end="url(#a)"/>
+  <text class="small ink" x="235" y="442" text-anchor="middle">asks</text>
+
+  <!-- Kafka -->
+  <rect class="ns" x="744" y="224" width="204" height="172" rx="10"/>
+  <text class="small muted" x="756" y="242">Kafka</text>
+  <rect class="box" x="760" y="264" width="172" height="92" rx="8"/>
+  <text class="title ink" x="846" y="290" text-anchor="middle">Delta topic</text>
+  <text class="mono muted" x="846" y="309" text-anchor="middle">ankka.graph-delta.v1</text>
+  <text class="small muted" x="846" y="327" text-anchor="middle">compacted: the latest</text>
+  <text class="small muted" x="846" y="343" text-anchor="middle">state of each element</text>
+  <line class="line" x1="668" y1="310" x2="758" y2="310" marker-end="url(#a)"/>
+  <text class="small ink" x="722" y="302" text-anchor="middle">deltas</text>
+
+  <!-- ankka-flow -->
+  <rect class="ns" x="980" y="224" width="196" height="172" rx="10"/>
+  <text class="small muted" x="992" y="242">an ankka-flow pipeline</text>
+  <rect class="box" x="994" y="264" width="168" height="92" rx="8"/>
+  <text class="title ink" x="1078" y="290" text-anchor="middle">Neo4j merge sink</text>
+  <text class="small muted" x="1078" y="310" text-anchor="middle">built into ankka-flow</text>
+  <text class="small muted" x="1078" y="327" text-anchor="middle">applies a delta only when</text>
+  <text class="small muted" x="1078" y="343" text-anchor="middle">its version is newer</text>
+  <line class="line" x1="932" y1="310" x2="992" y2="310" marker-end="url(#a)"/>
+
+  <!-- The graph database -->
+  <rect class="box" x="994" y="440" width="168" height="92" rx="8"/>
+  <text class="title ink" x="1078" y="466" text-anchor="middle">Graph database</text>
+  <text class="small muted" x="1078" y="486" text-anchor="middle">Neo4j</text>
+  <text class="small muted" x="1078" y="503" text-anchor="middle">a copy: emptied and rebuilt</text>
+  <text class="small muted" x="1078" y="519" text-anchor="middle">from the topic alone</text>
+  <line class="line" x1="1078" y1="356" x2="1078" y2="438" marker-end="url(#a)"/>
+  <text class="small ink" x="1086" y="420">merges</text>
+
+  <!-- answers -> graph database -->
+  <line class="dash" x1="668" y1="474" x2="992" y2="474" marker-end="url(#m)"/>
+  <text class="small muted" x="838" y="466" text-anchor="middle">queries, read only</text>
+</svg>
