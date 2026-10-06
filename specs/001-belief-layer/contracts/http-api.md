@@ -90,7 +90,7 @@ A market is compared with a holder through `GET /answers/comparison`, naming the
 
 | Route | Body | Reply |
 |---|---|---|
-| `POST /graph/wait` | `{kind, id, limitMs?}` | `{caughtUp, waitedMs, missing: [element key]}` |
+| `POST /graph/wait` | `{kind, id, limitMs?}` | `{caughtUp, waitedMs, missing: [element key]}`; an edge is missing until the record it points to is in the graph too |
 | `GET /graph/vocabulary` | | the vocabulary: `{layers: [{name, nodes: [...], edges: [...], holderKinds: [...]}]}` |
 
 `kind` is `question`, `holder`, `source`, `evidence`, `claim`, `revision` or `market`. The wait

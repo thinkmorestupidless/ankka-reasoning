@@ -328,7 +328,8 @@ curl -s localhost:9000/markets/launch-market/beliefs-at-resolution
 | `GET /graph/vocabulary` | | `{layers: [{name, nodes, edges, holderKinds}]}` |
 
 `/graph/wait` answers once the graph holds a record's node and every edge the record stated, at the
-record's version or later, or once the limit has passed. `kind` is `question`, `holder`, `source`,
+record's version or later, or once the limit has passed. An edge counts only when the record it
+points to is in the graph too, so a reader who has waited for a record can follow every link from it. `kind` is `question`, `holder`, `source`,
 `evidence`, `claim`, `revision` or `market`; a resolution is waited for through its market, and a
 price observation as the revision it is. `limitMs` is 5,000 when left out and at most
 `REASONING_WAIT_LIMIT_MAX_MS` (30,000 by default). Passing the limit is a `200` with

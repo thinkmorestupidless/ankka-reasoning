@@ -72,7 +72,11 @@ final class Neo4jGraph(connection: GraphConnection, answerWithinMs: Long = 5000L
       if edges.isEmpty then Vector.empty
       else
         read(
-          "UNWIND $edges AS e MATCH (a:Element {id: e.from})-[r]->(b:Element {id: e.to}) WHERE r.id = e.id " +
+          // The far end has to be a record and not the sink's placeholder for one: an edge may be
+          // applied before the node it points to, and a reader who waited would then find a link
+          // to nothing yet.
+          "UNWIND $edges AS e MATCH (a:Element {id: e.from})-[r]->(b:Element {id: e.to}) " +
+            "WHERE r.id = e.id AND coalesce(b._version, -1) >= 0 " +
             "RETURN r.id AS id, r._version AS version",
           Map("edges" -> edges)
         )(row => s"edge:${row.string("id")}" -> row.long("version"))

@@ -17,7 +17,8 @@ trait GraphReader:
 
   /**
    * The version the graph holds for each of these elements, by element key. One the graph does not
-   * hold is absent, and a placeholder, which is held at -1, counts as not held.
+   * hold is absent, and a placeholder, which is held at -1, counts as not held. An edge counts as
+   * held only when the node it points to is held too, and is not a placeholder.
    */
   def versionsOf(elements: Seq[Element]): Map[String, Long]
 

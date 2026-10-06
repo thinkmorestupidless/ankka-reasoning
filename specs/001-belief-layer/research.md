@@ -412,6 +412,8 @@ Outcomes of the claims above, and what else building it found. Each changed the 
 
 **F16. On a laptop that already runs a Postgres, the compose file's has to move.** `REASONING_POSTGRES_PORT` moves it for `just up` and `just run` both.
 
+**F17. A wait ended while the record at the far end of an edge was still a placeholder.** The sink applies an edge before the node it points to when their deltas arrive in that order, and creates a placeholder for the node. `/graph/wait` counted the edge as held, so a writer that recorded a source and then evidence could wait for the evidence and find it linked to a source with no name yet. The first run in CI found it; it had never shown on a laptop. An edge now counts only when the node it points to is held and is not a placeholder.
+
 ## Measurements
 
 On a laptop (Apple silicon, Docker Desktop), 2026-10-06.

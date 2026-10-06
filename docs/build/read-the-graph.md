@@ -267,7 +267,8 @@ A query that must not see half-arrived records filters on `_version >= 0`, or wa
 ## Wait for the graph to hold a record
 
 `POST /graph/wait` ends when the graph holds a record's node and every edge the record stated, at the
-record's version or later, or when the limit passes:
+record's version or later, or when the limit passes. An edge counts only when the node it points to is
+a record and not a placeholder, so after a wait every link from the record can be followed:
 
 ```bash
 curl -s localhost:9000/graph/wait -d '{ "kind": "claim", "id": "launch.tooling-ordered" }'

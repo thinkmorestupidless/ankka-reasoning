@@ -88,7 +88,7 @@ final class GraphEndpoint(
   get("/vocabulary")(() => Replies.handle(Replies.ok(VocabularyRead.of(vocabulary))))
 
   // Ends when the graph holds the record's node and every edge it stated at the record's version
-  // or later, or when the limit passes. Passing the limit is an answer and not an error, and says
+  // or later, with the record each edge points to, or when the limit passes. Passing the limit is an answer and not an error, and says
   // nothing about whether the record is held: it is.
   postBody("/wait") { (request: WaitRequest) =>
     Replies.handle {
