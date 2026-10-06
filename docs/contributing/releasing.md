@@ -53,6 +53,16 @@ A re-run of the workflow for a tag is safe: the `libraries` job asks Maven Centr
 version is there and uploads nothing a second time, the image is pushed again under the same tag,
 and the `marketplace` job finds nothing to commit.
 
+## When a release fails part-way
+
+The jobs are independent, so a release can publish some things and not others. A re-run of a failed
+job runs the workflow as it was at the tag, which is enough when the cause was outside the
+repository, such as a secret that was missing or lacked a permission: fix that and re-run the job.
+
+When the cause is in the workflow or the build, the tag cannot be mended, because a tag is not moved.
+Fix it on `main` and release the next version. The version that failed keeps whatever it did
+publish, and the notes on its release page should say what it lacks.
+
 ## What has to exist outside the repository
 
 Five repository secrets, and one setting made after the first release.
