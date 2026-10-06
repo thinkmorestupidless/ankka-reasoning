@@ -18,7 +18,7 @@ class DeploymentSuite extends munit.FunSuite:
   private def rendered: String =
     Files
       .readString(Path.of("deploy/service.json"))
-      .replace("${IMAGE}", "reasoning:0.1.0")
+      .replace("${IMAGE}", "ghcr.io/thinkmorestupidless/ankka-reasoning:0.1.0")
       .replace("${ANKKA_VERSION}", "0.10.0")
       .replace("${KAFKA}", "kafka.kafka.svc:9092")
       .replace("${NEO4J_URI}", "bolt://neo4j.neo4j.svc:7687")

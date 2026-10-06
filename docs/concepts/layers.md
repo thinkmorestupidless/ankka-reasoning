@@ -80,6 +80,32 @@ page of JSON can write any query against the graph without reading the service's
 [Graph vocabulary](../reference/graph-vocabulary.md) is the whole of it, and
 [Read the graph](../build/read-the-graph.md) uses it.
 
+## The layers as libraries
+
+Each layer is a library as well as a part of the service, so another ankka application can host the
+belief layer, or both, beside components of its own. A release publishes three modules to Maven
+Central under `com.thinkmorestupidless`:
+
+| Module | Holds |
+|---|---|
+| `ankka-reasoning-graph` | the vocabulary as a value, the only way to build an element, and the reader of the graph database |
+| `ankka-reasoning-belief` | the belief layer: `BeliefLayer.components`, `BeliefLayer.graphComponents(topic)` and `BeliefLayer.endpoints(clock, config, graph, acl)` |
+| `ankka-reasoning-market` | the market layer, the same three entry points on `MarketLayer` |
+
+```scala
+libraryDependencies += "com.thinkmorestupidless" %% "ankka-reasoning-belief" % "<version>"
+```
+
+Each depends on the one before it, so naming the market layer brings all three. The service is the
+example of composing them:
+[`ReasoningService`](https://github.com/thinkmorestupidless/ankka-reasoning/blob/main/modules/service/src/main/scala/reasoning/service/Main.scala)
+adds the two layers' components and endpoints together and nothing else. Two things are the
+service's and are not in the libraries: the `/graph` routes, and the rule for who a caller is as a
+writer, which an application supplies as the `acl` it hands each layer.
+
+No version has been released, so these are not on Maven Central yet;
+[Limitations](../reference/limitations.md) says so.
+
 ## Later layers
 
 A process layer is planned above these two: goals, tasks, workers and the calls they made, so that how

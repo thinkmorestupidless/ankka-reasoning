@@ -136,6 +136,7 @@ against 0.61, the claims agent-a rests on, and the market stating no reasons.
 | [`modules/seed`](modules/seed), [`seed/`](seed) | A client of the service: the worked example and a generated set of ten questions as seed files, and the tool that measures. |
 | [`deploy/`](deploy), [`docker-compose.yml`](docker-compose.yml) | The pipeline blueprint and service descriptor for a cluster, and what stands in for a cluster on a laptop. |
 | [`docs/`](docs), [`mkdocs.yml`](mkdocs.yml) | The documentation, published at [reasoning.ankka.cloud](https://reasoning.ankka.cloud/) and rendered as an agent skill under [`marketplace/`](marketplace). Built by ankka's docs tool: `just docs`. |
+| [`.github/workflows/release.yml`](.github/workflows/release.yml) | What a `v*` tag publishes: the three layers to Maven Central, the service's image to `ghcr.io/thinkmorestupidless/ankka-reasoning`, the plugin to the ankka marketplace, and a release page. No version has been released yet. |
 | [`notes/ankka-requests.md`](notes/ankka-requests.md) | What this application asks of ankka and ankka-flow, and what each request would remove here. |
 | [`CLAUDE.md`](CLAUDE.md) | The working rules for the repository and its commands. |
 

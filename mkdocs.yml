@@ -115,3 +115,4 @@ nav:
       - Glossary: reference/glossary.md
   - Contributing:
       - Writing documentation: contributing/documentation.md
+      - Releasing: contributing/releasing.md
