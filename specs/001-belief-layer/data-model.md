@@ -9,8 +9,8 @@ What the service holds. Each kind of record is one ankka entity per record (R1 i
 
 | Field | Type | Set by | Notes |
 |---|---|---|---|
-| `id` | identifier | the writer; derived for evidence | 1 to 100 characters of `[A-Za-z0-9._-]`, starting with a letter or digit (R11) |
-| `dated` | instant | the writer, or the service when left out | never later than `recordedAt`; never earlier than the date of any record it links to |
+| `id` | identifier | the writer; derived for evidence | 1 to 64 characters of `[A-Za-z0-9._-]`, starting with a letter or digit (R11) |
+| `dated` | instant | the writer, or the service when left out | never later than `recordedAt`; never earlier than the date of any record it links to, a holder or a source excepted: those are dated when registered |
 | `recordedAt` | instant | the service | the endpoint's clock when the record was accepted (R4) |
 | `writer` | writer | the service | who sent it (R5); never published to the graph |
 
@@ -91,7 +91,7 @@ Withdrawing writes the record's state again with `locator`, `excerpt` and `autho
 included, stays. It is done once and not undone. Who may: the writer who recorded the evidence, a
 writer who speaks for the claim's holder, or a steward.
 
-### Belief (event sourced entity `belief`, id = `<holder>~<question>~<hypothesis>`, at most 302 characters)
+### Belief (event sourced entity `belief`, id = `<holder>~<question>~<hypothesis>`, at most 194 characters)
 
 State, kept small:
 
@@ -137,8 +137,8 @@ current = rN  ── state one that follows anything else ─► refused, naming
 |---|---|---|
 | `question` | question id | must be held |
 | `venue` | text | 1 to 200 characters |
-| `id` | identifier | at most 60 characters, so the identifiers derived from it stay within 100 |
-| `outcomes` | list of (outcome name, hypothesis) | at least one; a name is 1 to 20 characters of the identifier's; names unique; each hypothesis of that question and offered at most once |
+| `id` | identifier | at most 32 characters, so the identifiers derived from it stay within 64 |
+| `outcomes` | list of (outcome name, hypothesis) | at least one; a name is 1 to 16 characters of the identifier's; names unique; each hypothesis of that question and offered at most once |
 | `resolutionCriteria` | text | 1 to 2,000 characters |
 | `closesAt` | instant | after which no price observation is taken |
 | `holder` | holder id | the holder the market speaks as; `market.<market id>`, registered when the market is opened, kind `market`, spoken for by the writer who opened it |

@@ -26,14 +26,16 @@ Each is a key under `reasoning` in `application.conf` with an environment overri
   answers `503` and every other route is unaffected.
 - **D3.** The service never writes to the graph database and creates nothing in it.
 - **D4.** A setting is read once at start. Changing one is a restart.
+- **D4a.** The service asks its database what has changed once a second
+  (`pekko.persistence.r2dbc.refresh-interval = 1s` in `application.conf`; Pekko's default is three).
+  It is the floor under how long a record takes to reach the graph ([../research.md](../research.md), F14).
 
 ## Writers
 
 | The caller is | The writer is |
 |---|---|
 | another ankka service, by its certificate | `service:<project>/<name>` |
-| the gateway, with a bearer token an accepted issuer signed | `person:<subject>@<issuer name>` |
-| the gateway, with no token or one not accepted | refused, `401` |
+| the gateway | refused, `401`: a person's token cannot be verified with ankka 0.10.0 ([../research.md](../research.md), F1); `person:<subject>@<issuer name>` once it can |
 | anything, when the service runs outside a cluster | `local` |
 
 - **D5.** The writer is decided by the service from the connection and the token. Nothing in a
@@ -75,14 +77,14 @@ blueprint {
       partitions = 3
       replicas   = 1
       consumer-config { auto.offset.reset = earliest }
-      topic-config { max.compaction.lag.ms = 86400000 }
+      topic { max.compaction.lag.ms = 86400000 }
     }
   }
 }
 ```
 
-How a blueprint spells a topic setting is to be confirmed against ankka-flow 0.3.0 (V6 in
-[../research.md](../research.md)); `topic-config` above stands for it. The sink reaches the graph
+`flow verify` accepts it and notes that the topic carries graph deltas and is compacted. The sink
+reaches the graph
 database through a Secret named in deploy-time configuration, as for any merge sink. Its consumer group is `reasoning-graph.graph.in`. Neo4j is 5.26 or later.
 
 ## The service descriptor
@@ -106,13 +108,17 @@ database through a Secret named in deploy-time configuration, as for any merge s
 }
 ```
 
+`sbt deployDescriptors` writes it to `target/deploy/service.json` with the image and the ankka
+version from the build, and the broker and the graph database from `REASONING_DEPLOY_KAFKA` and
+`REASONING_DEPLOY_NEO4J_URI`.
+
 ## On a laptop
 
 `docker-compose.yml` runs what a cluster would supply:
 
 | Service | Image | Reached at |
 |---|---|---|
-| `postgres` | `postgres:17-alpine`, with ankka's DDL from `target/ddl` | `localhost:5432` |
+| `postgres` | `postgres:17-alpine`, with ankka's DDL from `target/ddl` | `localhost:5432`, or the port in `REASONING_POSTGRES_PORT` |
 | `kafka` | `apache/kafka:3.9.1`, topics not created on first use | `localhost:9094` |
 | `topic` | the Kafka image, run once: creates the topic compacted | |
 | `neo4j` | `neo4j:5.26-community` | `localhost:7474`, `bolt://localhost:7687` |

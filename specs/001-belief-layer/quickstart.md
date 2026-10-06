@@ -2,8 +2,7 @@
 
 Five tiers, each proving more with more running. Docker is required from tier 2. The routes are in
 [contracts/http-api.md](contracts/http-api.md) and the settings in
-[contracts/deployment.md](contracts/deployment.md). Nothing here exists until the slices in
-[plan.md](plan.md) are built; this is what each will be checked against.
+[contracts/deployment.md](contracts/deployment.md). What was run and seen is recorded at the end.
 
 ## Prerequisites
 
@@ -46,7 +45,7 @@ something not held is refused* goes red.
 ## Tier 3 — the service, Kafka, the sink and Neo4j (several minutes)
 
 ```bash
-sbt 'service/testOnly *PublicationFeatures *VocabularyFeatures *BeliefChangeFeatures *CaseFeatures *AsOfFeatures *DisagreementFeatures *MarketsFeatures *WithdrawalFeatures *ResolutionFeatures *SeededSetSuite'
+sbt 'service/testOnly *PublicationFeatures *VocabularyFeatures *BeliefChangeFeatures *CaseFeatures *AsOfFeatures *DisagreementFeatures *MarketsFeatures *WithdrawalFeatures *ResolutionFeatures *SeededSetSuite *AsOfPropertySuite *VocabularyQuerySuite *CompactionErasureSuite *ErasureSuite'
 ```
 
 Testcontainers start Kafka, Neo4j and the released sink image once for the run. The scenarios in
@@ -75,7 +74,7 @@ Wait for the second revision to be in the graph, then ask why the belief changed
 
 ```bash
 curl -s localhost:9000/graph/wait -d '{"kind":"revision","id":"agent-a.launch.2"}'
-curl -s 'localhost:9000/answers/belief-change?holder=agent-a&hypothesis=launch/yes&from=agent-a.launch.1&to=agent-a.launch.2'
+curl -s 'localhost:9000/answers/belief-change?from=agent-a.launch.1&to=agent-a.launch.2'
 ```
 
 Expect `0.38` and `0.61`, the claim "the approval barrier has gone" newly rested on with the
@@ -91,8 +90,8 @@ docker compose exec neo4j cypher-shell -u neo4j -p reasoning-local-password \
 Then the seeded set and the measurements:
 
 ```bash
-just seed ten-questions      # ten questions, at least 500 records
-just measure                 # time to graph for each record; time to answer for the largest question
+just seed ten-questions      # ten questions, 555 records
+just measure                 # the set again under its own names, each record timed to the graph; then a question of 1,000 records, timed to its answer
 just rebuild                 # stop the sink, empty Neo4j, reset the group, start the sink
 ```
 
@@ -108,7 +107,7 @@ neo4j-up`:
 ```bash
 flow verify deploy/pipeline/blueprint.conf --conf deploy/pipeline/kind.conf
 flow generate deploy/pipeline/blueprint.conf --conf deploy/pipeline/kind.conf -n reasoning | kubectl apply -f -
-just images && just descriptors
+just images && REASONING_DEPLOY_KAFKA=<broker> REASONING_DEPLOY_NEO4J_URI=<bolt address> just descriptors
 ankka services apply -f target/deploy/service.json --project reasoning
 just seed launch-example https://reasoning-reasoning.127.0.0.1.sslip.io:8443
 ```
@@ -121,9 +120,43 @@ token and a service by its certificate (R5); the sink the operator runs is the o
 
 ## Reviewer's checklist
 
-- [ ] Tier 1 to 3 pass from a clean checkout with `sbt test`.
-- [ ] Every scenario under `features/` is run by exactly one suite; none is ignored.
-- [ ] Each "to see it can fail" above was tried once and went red.
-- [ ] Tier 4's explanation matches the launch example in the glossary, value for value.
-- [ ] The measurements for SC-007 are recorded at the end of `research.md`.
-- [ ] Every item in `research.md`'s "Verify first" has an outcome beside it.
+- [x] Tier 1 to 3 pass from a clean checkout with `sbt test`.
+- [x] Every scenario under `features/` is run by exactly one suite; none is ignored.
+- [x] Each "to see it can fail" above was tried once and went red.
+- [x] Tier 4's explanation matches the launch example in the glossary, value for value.
+- [x] The measurements for SC-007 are recorded at the end of `research.md`.
+- [x] Every item in `research.md`'s "Verify first" has an outcome beside it.
+
+## What was run, 2026-10-06
+
+**Tiers 1 to 3.** `sbt clean scalafmtCheckAll test`, on a laptop with the sink's image built from
+ankka-flow's `v0.3.0` tag (research F8): 266 tests in 43 suites, none failed or ignored, in about four and a half minutes. Each feature file is run by one suite; the five
+under `features/record` other than withdrawal are run a second time against a service with no
+market layer (`BeliefOnlySuite`). `just features` reports no findings in 119 scenarios.
+
+**Each "to see it can fail".**
+
+| Changed | Went red |
+|---|---|
+| a property the vocabulary does not name, added to a claim's node | `GraphSuite`, twice, with `UndeclaredElement` |
+| the check that a claim's evidence is held, removed | *a claim that names something not held is refused*, and nothing else |
+| a claim's `REVISES` edge published the wrong way round | *every edge runs from a record to one held before it* and *every record is in the graph with the links it stated* |
+| the sink stopped, on the laptop stack | a wait of six seconds for evidence recorded meanwhile answered `caughtUp: false`, naming the node and the edge it lacked; the record was held all the while, and the wait ended in under two seconds once the sink was started again |
+
+**Tier 4.** `REASONING_POSTGRES_PORT=5433 just up` (this laptop's 5432 was taken), the staged
+service on `:9000`, then:
+
+| Step | Seen |
+|---|---|
+| `just seed launch-example` | 10 sent, 10 new |
+| `/graph/wait` for `agent-a.launch.2` | caught up after 1.9 s |
+| `/answers/belief-change` | 0.38 and 0.61; newly rested on "the approval barrier has gone" with "Notice 1187: Product Y is approved for sale." from the regulator; no longer rested on "approval is pending and the launch date is uncertain", revised by `launch.barrier-gone`; the notice observed between |
+| the trace in `cypher-shell` | one row: the claim, the notice's excerpt, "the regulator" |
+| `just seed ten-questions` | 557 sent, 555 new, the 2 withdrawals answered `200` |
+| `just measure` | in research.md, Measurements |
+| `just rebuild` | 3,752 nodes and 11,350 edges back in about six seconds; an explanation asked before and after was the same, byte for byte |
+
+**Tier 5. Not run.** This laptop's `kubectl` context pointed at a cluster that is not the local
+one, and nothing here was going to switch it or deploy through it. `flow verify` accepts the
+blueprint and `DeploymentSuite` decodes the descriptor under ankka's rules; a deployment through
+the gateway is unproven (research F15).

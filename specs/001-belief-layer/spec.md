@@ -402,7 +402,9 @@ as withdrawn. Empty and rebuild the graph database and find the text in neither.
 - **FR-010**: Every record a record names MUST already be held when it is written, checked against
   the service's own records and never against the graph database.
 - **FR-011**: A record's date MUST NOT be later than the time it is recorded, nor earlier than the
-  date of any record it links to; evidence MUST NOT be observed before it was published. The time a
+  date of any record it links to; evidence MUST NOT be observed before it was published. A holder
+  and a source are registered, not stated: each is dated when it was registered, and a record that
+  names one may be dated before that. The time a
   record was recorded, and the writer who sent it, are set by the service from what it knows of the
   caller, never taken from the record, and kept beside its date.
 - **FR-012**: Every write MUST be safe to repeat: the same record sent again is the record already
@@ -600,8 +602,8 @@ within the delta contract's rules for identifiers and property values.
 - The same evidence is recognised only when its source, locator and excerpt are identical. Two
   claims that say the same thing in different words are two claims.
 - A writer is whoever the service authenticates the caller as: another service by its identity, or
-  a person by a token. Which of the two a deployment uses is the plan's to settle. Any admitted
-  caller may read.
+  a person by a token. Built on ankka 0.10.0 only the first is possible; a person's token waits
+  for the ankka release that carries its verifier. Any admitted caller may read.
 - The service keeps an excerpt and a locator for evidence, not the original document.
 - Text that can be withdrawn has to be kept somewhere it can truly be erased from, which an
   append-only journal of events is not. The plan keeps every record that carries text in a key

@@ -12,7 +12,9 @@ What the service holds behind each kind is in [../data-model.md](../data-model.m
 - **V2.** Every node and edge is published by exactly one kind of record, named below, and by the
   one record it belongs to.
 - **V3.** An edge runs from the node of the record that stated it to the node of a record that was
-  held before it. Its type and endpoints never change.
+  held before it, so `recordedAt` never rises along an edge. Nor does `dated`, except into a
+  `Holder` or a `Source`, which are dated when they were registered. An edge's type and endpoints
+  never change.
 - **V4.** A node is published whole each time. The only node that ever loses properties is one
   whose text is withdrawn.
 - **V5.** Nothing is ever tombstoned.

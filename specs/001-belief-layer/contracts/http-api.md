@@ -20,6 +20,9 @@ like, and every rule's name, is in [refusals.md](refusals.md); who the caller is
   graph database is not configured or cannot be reached. Every other route works without it.
 - **H6.** An answer contains records and identifiers only. Each record in an answer has `dated` and
   `recordedAt`.
+- **H7.** With `asOf`, no stated record in the answer is dated later; with `asRecordedBy`, none was
+  recorded later. A source or a holder is registered and not stated: it is shown beside a record
+  that counts whenever it was registered itself.
 
 ## Belief layer: writes and read-back
 
@@ -37,12 +40,12 @@ like, and every rule's name, is in [refusals.md](refusals.md); who the caller is
 | `GET /evidence/{evidence}` | | the evidence |
 | `POST /evidence/{evidence}/withdrawal` | `{note}` | the evidence, withdrawn |
 | `POST /claims` | `{id, holder, statement, derivesFrom: [evidence], stances: [{hypothesis, stance}], revises?, dated?}` | the claim |
-| `GET /claims/{claim}` | | the claim, with `revisedBy: [claim]` when later claims revise it |
+| `GET /claims/{claim}` | | `{claim, revisedBy: [claim id]}`: the claim, and the claims that revise it, empty when none does |
 | `POST /claims/{claim}/withdrawal` | `{note}` | the claim, withdrawn |
-| `POST /beliefs/revisions` | `{id, holder, hypothesis, probability, restsOn: [{claim, weight?}], follows?, dated?}` | the revision, with its `n` |
+| `POST /beliefs/revisions` | `{id, holder, hypothesis, probability, restsOn: [{claim, weight?}], follows?, dated?}` | the revision, with its `n` and its `sequence` |
 | `GET /beliefs/revisions/{revision}` | | the revision |
 | `GET /beliefs/current?holder=&hypothesis=` | | `{holder, hypothesis, count, current?}` |
-| `GET /beliefs/line?holder=&hypothesis=&before=&limit=` | | `{revisions: [...], more}`: newest first, from `before` (a revision id, exclusive) or the head; `limit` 1 to 100, 50 by default |
+| `GET /beliefs/line?holder=&hypothesis=&before=&limit=` | | `{revisions: [...], more}`: newest first, from `before` (a revision id, exclusive) or the head; `limit` 50 by default, and a `limit` over 100 is taken as 100 |
 
 `stance` is `supports` or `contradicts`. `kind` is a holder kind in the vocabulary.
 `GET /claims/{claim}`'s `revisedBy` comes from a view over the claims, queried by the claim they
@@ -52,21 +55,22 @@ revise. It is the one read-back that may lag a write by a moment; nothing is dec
 
 | Route | Answer |
 |---|---|
-| `GET /answers/belief-change?holder=&hypothesis=&from=&to=` | `{from: revision, to: revision, newlyRestedOn: [support], noLongerRestedOn: [support], stillRestedOn: [{support, weightFrom?, weightTo?}], observedBetween: [evidence]}` |
+| `GET /answers/belief-change?from=&to=` | `{from: revision, to: revision, newlyRestedOn: [support], noLongerRestedOn: [support], stillRestedOn: [{support, weightFrom?, weightTo?}], observedBetween: [evidence]}` |
 | `GET /answers/belief?holder=&hypothesis=` | `{revision?, restsOn: [support]}`: the current revision, or the one current at `asOf` |
 | `GET /answers/case?hypothesis=&stance=` | `{claims: [support], revisedClaims: [support]}` |
 | `GET /answers/learned?question=&after=` | `{evidence: [...], claims: [...], revisions: [...]}`: each dated later than `after`, oldest first |
-| `GET /answers/comparison?hypothesis=&a=&b=` | `{a: side, b: side, difference, both: [{support, weightA?, weightB?}], onlyA: [support], onlyB: [support]}` |
+| `GET /answers/comparison?hypothesis=&a=&b=&hypothesisOfB=?` | `{a: side, b: side, difference, both: [{support, weightA?, weightB?}], onlyA: [support], onlyB: [support]}` |
 | `GET /answers/resting-on-revised?question=` | `{beliefs: [{holder, hypothesis, revision, revisedClaims: [support]}]}` |
 
-A `support` is `{claim, weight?, evidence: [{evidence, source}], revisedBy: [claim], heldBy: [holder]}`,
-where `claim`, `evidence` and `source` are records. `revisedBy` and `heldBy` are present where the
-answer calls for them: `revisedBy` wherever a claim is shown, `heldBy` (the holders whose current
-revisions rest on the claim) in a case. A `side` is `{holder, revision?, statesNoReasons}`.
-`difference` is `a`'s probability less `b`'s.
+A `support` is `{claim, weight?, evidence: [evidence], revisedBy: [claim], heldBy: [holder]}`, each piece of evidence with its `source` inside it,
+where `claim`, `evidence` and `source` are records. `revisedBy` and `heldBy` (the holders whose current
+revisions rest on the claim) are on every support. A `side` is `{holder, revision?, statesNoReasons}`;
+a holder with no revision, or one that is not held, is a side with no revision.
+`difference` is the gap between the two probabilities, never negative, and absent when either side has no revision; which is the greater is plain from the two.
 
 `from` and `to` are revision ids of one belief, in either order of the line; ids of two beliefs are
-refused. With no revision at the time asked about, `revision` is absent and the reply is `200`.
+refused, and so is a revision that does not count at the time asked about. `a` and `b` are holders;
+`hypothesisOfB` may name a second hypothesis only to be told that beliefs in two are not compared. With no revision at the time asked about, `revision` is absent and the reply is `200`.
 
 ## Market layer
 
@@ -76,10 +80,10 @@ refused. With no revision at the time asked about, `revision` is absent and the 
 | `GET /markets/{market}` | | the market, with its resolutions |
 | `POST /markets/{market}/price-observations` | `{outcome, price, observedAt?}` | `{revision, added}`: the market's current revision for that outcome; `added` is `false` when the price had not moved |
 | `POST /markets/{market}/resolutions` | `{id, outcome?, evidence: [evidence], authority, revises?, dated?}` | the market |
-| `GET /markets/{market}/resolution` (graph) | | `{resolution, hypothesis?, evidence: [{evidence, source}]}`: why it was resolved; `404` when it is not |
-| `GET /markets/{market}/beliefs-at-resolution` (graph) | | `{resolution, beliefs: [{holder, hypothesis, revision, resolvedTo}]}`: each holder's last revision dated before the resolution, for each hypothesis the market offers |
+| `GET /markets/{market}/resolution` (graph) | | `{resolution, hypothesis?, evidence: [evidence]}`, each piece of evidence with its `source` inside it: why it was resolved; `404` with `market.not-resolved` when it is not, or when no such market is held |
+| `GET /markets/{market}/beliefs-at-resolution` (graph) | | `{resolution, hypothesis?, beliefs: [{holder, hypothesis, revision, resolvedTo}]}`: each holder's last revision dated at or before the resolution, for each hypothesis the market offers |
 
-A market's `id` is at most 60 characters and an outcome name is 1 to 20 characters of `[A-Za-z0-9._-]`. A resolution with no `outcome` is void.
+A market's `id` is at most 32 characters and an outcome name is 1 to 16 characters of `[A-Za-z0-9._-]`. A resolution with no `outcome` is void.
 A market is compared with a holder through `GET /answers/comparison`, naming the market's `holder`.
 
 ## The graph

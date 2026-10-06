@@ -9,9 +9,12 @@ hypotheses compete to answer a question, and a belief is one holder's probabilit
 hypothesis. Nothing in it is ever edited, so any belief can be traced to its sources, read back as
 it stood on any past day, and set beside a belief that disagrees with it.
 
-**This repository is at the design stage.** It holds a specification, the scenarios that
-specification names, and a glossary. There is no code yet, and this page describes what is being
-built.
+**Documentation: [reasoning.ankka.cloud](https://reasoning.ankka.cloud/).**
+
+**The first feature is built.** The belief layer and the market layer are recorded, published to
+the graph and explained, with every scenario under [`features/`](features) run by a test. No agent
+writes to it yet: records come from a person, a script or a test. It is unreleased and runs on a
+laptop; see [Running it](#running-it).
 
 ## The problem
 
@@ -123,10 +126,39 @@ against 0.61, the claims agent-a rests on, and the market stating no reasons.
 
 | | |
 |---|---|
-| [`specs/001-belief-layer/spec.md`](specs/001-belief-layer/spec.md) | The first feature: the belief layer and the market layer, recorded, published and explained. |
-| [`features/`](features) | What the service does, as scenarios in four areas: `record`, `graph`, `explain`, `market`. The spec names them. |
+| [`specs/001-belief-layer/`](specs/001-belief-layer) | The first feature: its spec, plan, contracts, and in `research.md` every decision and what building it found. |
+| [`features/`](features) | What the service does, as scenarios in four areas: `record`, `graph`, `explain`, `market`. The spec names them and a suite runs each. |
 | [`GLOSSARY.md`](GLOSSARY.md) | The words the scenarios use, each in one sense. |
-| [`CLAUDE.md`](CLAUDE.md) | The working rules for the repository, these five among them. |
+| [`modules/graph`](modules/graph) | The vocabulary as a value, the only way to build an element, and the reader of the graph database. |
+| [`modules/belief`](modules/belief) | The belief layer: its records as ankka entities, its rules, its graph consumers, its answers and its routes. It names nothing of markets, and the build holds it to that. |
+| [`modules/market`](modules/market) | The market layer, built on the belief layer and changing nothing in it. |
+| [`modules/service`](modules/service) | The one deployable: both layers composed, and the suites that run the features. |
+| [`modules/seed`](modules/seed), [`seed/`](seed) | A client of the service: the worked example and a generated set of ten questions as seed files, and the tool that measures. |
+| [`deploy/`](deploy), [`docker-compose.yml`](docker-compose.yml) | The pipeline blueprint and service descriptor for a cluster, and what stands in for a cluster on a laptop. |
+| [`docs/`](docs), [`mkdocs.yml`](mkdocs.yml) | The documentation, published at [reasoning.ankka.cloud](https://reasoning.ankka.cloud/) and rendered as an agent skill under [`marketplace/`](marketplace). Built by ankka's docs tool: `just docs`. |
+| [`notes/ankka-requests.md`](notes/ankka-requests.md) | What this application asks of ankka and ankka-flow, and what each request would remove here. |
+| [`CLAUDE.md`](CLAUDE.md) | The working rules for the repository and its commands. |
+
+## Running it
+
+JDK 21, sbt, Docker and `just`. ankka 0.10.0 comes from Maven Central. The merge sink's image,
+`ghcr.io/thinkmorestupidless/ankka-flow-sidecar:0.3.0`, cannot yet be pulled without a credential:
+until it can, build it from ankka-flow's `v0.3.0` tag and tag it with that name.
+
+```bash
+just up                      # Postgres, Kafka with the compacted topic, Neo4j, the merge sink
+just run                     # the service on :9000
+just seed launch-example     # the example above, as records
+curl -s localhost:9000/graph/wait -d '{"kind":"revision","id":"agent-a.launch.2"}'
+curl -s 'localhost:9000/answers/belief-change?from=agent-a.launch.1&to=agent-a.launch.2'
+```
+
+The last answers with 0.38 and 0.61, the claim newly rested on with the regulator's notice and its
+source, and the earlier claim no longer rested on and revised by it. `just test` runs every suite;
+[`quickstart.md`](specs/001-belief-layer/quickstart.md) walks through what each tier proves and what
+was measured.
+
+## What comes next
 
 The first feature has no agents in it. Records arrive from a person, a script or a test, which is
 enough to prove the model holds and explains reasoning whoever wrote it. What follows, in the order

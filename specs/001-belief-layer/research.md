@@ -235,7 +235,7 @@ answer read after a wait on the node alone could miss the claim's evidence.
 
 **Decision**: A writer chooses the identifier of a question, a hypothesis within its question, a
 holder, a source, a claim, a belief revision, a market and a resolution within its market:
-1 to 100 characters of `[A-Za-z0-9._-]`, starting with a letter or digit. A hypothesis is referred
+1 to 64 characters of `[A-Za-z0-9._-]`, starting with a letter or digit (F3). A hypothesis is referred
 to as `<question>/<hypothesis>`. An evidence identifier is the SHA-256, in hex, of its source,
 locator and excerpt. The same record under a held identifier is that record; a different one is
 refused.
@@ -357,15 +357,80 @@ of entity.
 | V5 | An `Acl.Authenticate` decision can read the caller and, for the gateway, defer to `ankka-auth-oidc`; `asCaller` yields distinct service callers in a test | R5 |
 | V6 | A blueprint topic can carry `max.compaction.lag.ms`, and the operator creates the topic with it | R7, FR-036 |
 | V7 | A service with graph consumers starts under `AnkkaTestKit` with an in-memory broker and no Kafka | R6, R12 |
-| V8 | An entity id may contain `~`, `.`, `-`, `_` and 64 hex characters, and may be 302 characters long | R8, R11 |
+| V8 | An entity id may contain `~`, `.`, `-`, `_` and 64 hex characters, and may be as long as a belief's | R8, R11 |
 | V9 | `ankka-testkit` 0.10.0 on Maven Central contains `GherkinSuite`, and `ankka-auth-oidc` 0.10.0 is published | R12, R5 |
 | V10 | With default consumer and sink settings a record reaches Neo4j within five seconds nine times in ten | R9, SC-007 |
 | V11 | The Neo4j driver's blocking session runs on an endpoint's virtual thread without pinning it for the length of a query | R9 |
 
+## Found during implementation
+
+Outcomes of the claims above, and what else building it found. Each changed the plan where it says.
+
+| # | Outcome |
+|---|---|
+| V4 | **Settled differently.** `features/` resolves from the forked test JVM once `Test / baseDirectory` is the repository's root. But testkit 0.10.0's `GherkinSuite` runs every feature under a directory and cannot be given one file (F2). |
+| V5 | **Passed**, for services and local callers (`WritersSuite`). A person's token is not verified at all (F1). |
+| V1 | **Passed.** A key value entity's row is overwritten in place: after a withdrawal no row of the service's database holds the text (`ErasureSuite`, which first shows the row did hold it). |
+| V2 | **Passed.** A graph consumer over `ChangeSource.stateOf` is delivered each revision and sink 0.3.0 replaces the node whole (`PublicationFeatures`); a withdrawn record's node loses its text, in the graph and in a graph rebuilt from the topic (`WithdrawalFeatures`), and the earlier delta leaves the compacted topic (`CompactionErasureSuite`). |
+| V3 | **Passed**, with the image built from ankka-flow's `v0.3.0` tag (`SinkSmokeSuite`); see F8. |
+| V6 | **Passed.** A blueprint topic takes Kafka settings under `topic { … }`, and `flow verify` accepts `max.compaction.lag.ms` there. |
+| V10 | **Passed.** Nine in ten records are in the graph within 3.1 s; see Measurements. |
+| V7 | **Passed.** The service starts with its graph consumers over an in-memory broker (`ServiceFixture`) and over Kafka (`GraphFixture`). |
+| V11 | **Passed** by construction: every read runs on a virtual thread of its own and the caller waits on it with a deadline (`Neo4jGraph.read`). |
+| V8 | **Settled differently.** Characters pass, `~` among them. Length does not: see F3. |
+| V9 | **Partly.** `ankka-testkit` 0.10.0 has `GherkinSuite`. `ankka-auth-oidc` is not published at any version (F1). |
+
+**F1. ankka 0.10.0 cannot verify a person's token.** `ankka-auth-oidc` arrived with ankka's feature 022, which merged after `v0.10.0`, and has never been published to Maven Central. R5's second row (the gateway with a bearer token) therefore cannot be built on a release. The service names another service by its certificate and a local caller as `local`, and refuses the gateway with `401`. Person tokens wait for the first ankka release that carries the module; nothing else in this feature depends on them.
+
+**F2. `GherkinSuite` in 0.10.0 takes a directory, not a file, and has no way to mark a scenario as run elsewhere.** Both arrived after `v0.10.0`. R12 wants one suite per feature file so that a suite never meets unbound steps. Until the build moves to a release with them, each suite is handed a directory under `target/feature-suites/` holding a copy of its one file (`FeatureSuite.directoryOf`). Test names therefore show the copy's path.
+
+**F3. An entity's id is bounded by a 255-character column it shares with its component's name.** `persistence_id VARCHAR(255)` in ankka's schema holds `<component>|<entity id>`. A belief's id is three identifiers joined, so an identifier is at most **64** characters (not 100), a market's at most 32 and an outcome name at most 16, which keeps every derived identifier within 64 and a belief's id within 194. `EntityIdSuite` round-trips the longest of each.
+
+**F4. The test kit of 0.10.0 starts a Postgres per kit.** One service fixture is therefore shared by every suite in the test JVM, and a scenario keeps out of the others' way by naming its records after itself. The kit of the release after shares one container itself.
+
+**F5. A repeat is recognised by what the writer supplied.** "The same record sent again" cannot compare the date when the writer left it out, since the service supplied a different one each time. The entities compare the writer's content and the date only when it was stated (`Same`).
+
+**F6. Three rule names the contract did not have** were needed and are added to it: `claim.stance.unknown` (a stance that is neither word), `record.not-held` (the body of a `404`), and `command.refused` (an entity's own error, which should not occur).
+
+**F7. A holder and a source have no date a writer states, so the date rule exempts them.** History is entered with past dates, but a holder or a source is registered whenever it is registered. Held to "never dated before a record it links to", evidence observed last May could not name a source registered today. They are the cast and not the plot: `recordedAt` still never rises along any edge, and FR-011, the vocabulary's V3 and the data model say so. The same test found that a claim and a belief revision were not checked against their hypothesis's date; they are now (`claim.dated.not-before-hypothesis`, `belief.dated.not-before-hypothesis`).
+
+**F8. The released sink image cannot be pulled.** `ghcr.io/thinkmorestupidless/ankka-flow-sidecar:0.3.0` answers `denied` to an anonymous pull, so the package is private although ankka-flow is public. The graph suites ran against the same image built from the `v0.3.0` tag and tagged with that name locally. Until the package is public, CI here builds the image from that tag before it tests, which no pull request has yet run, and the laptop walkthrough needs the image built by hand.
+
+**F9. Two listeners on Kafka, and the fixture's descriptor.** The sink's container reaches Kafka on an internal listener and the service on the mapped one (`KafkaContainer.withListener`). The sink accepts the built-in descriptor copied from ankka-flow's fixtures as it is.
+
+**F10. A step's body takes at most four values in testkit 0.10.0.** A step that names five things is written with one of them fixed in its expression. Nothing in the features changed for it.
+
+**F11. A price observation is recognised as a repeat by its derived identifier before it is sent on.** `<market>.<outcome>.<observedAt in milliseconds>` is checked against the revisions held; without that check the same observation sent after a later one was refused for not following the current revision, where FR-027 wants it answered with the revision it already is.
+
+**F12. A revision named by its identifier has to count at the time asked about.** `/answers/belief-change` took its two revisions by id and applied `asOf` only to what they rest on, so it answered about revisions dated after the time asked. `AsOfPropertySuite` found it; the answer is now refused with `answer.revision.later-than-asked`. The scenarios had not, because each asks about revisions that exist at its time.
+
+**F13. An answer as of a time names a source or a holder registered after it.** This follows from F7 and is the reading of SC-006 the suites hold: no *stated* record in an answer is dated later than the time asked about. A source is shown beside evidence that counts, and a holder beside a claim or a revision that counts, whenever each was registered. `asRecordedBy` is not read this way for links: `recordedAt` never rises along an edge, so nothing in such an answer was recorded later.
+
+**F14. The time to the graph is the consumer's poll.** A graph consumer over a key value entity's state is fed by polling, and Pekko's `refresh-interval` defaults to three seconds. Under a burst of 555 writes that put nine in ten at 5.1 s, over SC-007's five. The service sets `pekko.persistence.r2dbc.refresh-interval = 1s` in its `application.conf`, as ankka's control plane sets it to 500 ms for itself; it is the polling knob and not the `behind-current-time` guard. Request 10 asks ankka to own the setting.
+
+**F15. Tier 5 of the quickstart was not run.** The laptop's `kubectl` context pointed at a cluster that is not the local one. The blueprint is verified by `flow verify` and the descriptor by ankka's own decoding rules (`DeploymentSuite`); what tier 5 would add, a deployment through the gateway, is unproven.
+
+**F16. On a laptop that already runs a Postgres, the compose file's has to move.** `REASONING_POSTGRES_PORT` moves it for `just up` and `just run` both.
+
+## Measurements
+
+On a laptop (Apple silicon, Docker Desktop), 2026-10-06.
+
+| What | How | Measured | Target (SC-007) |
+|---|---|---|---|
+| A record's `201` to the graph holding its node and every edge | `LatencySuite`: 30 records, one at a time, under the test kit with Kafka, the v0.3.0 sink and Neo4j in containers; polling every three seconds | median 3.0 s, nine in ten within 3.1 s, slowest 3.2 s | five seconds, nine in ten |
+| The same | `just measure` against `just up` and `just run`: the seeded set's 555 records in one burst of about fifteen seconds; polling every three seconds | median 3.4 s, nine in ten within **5.1 s**, slowest 6.3 s | five seconds, nine in ten: **missed** |
+| The same | as above, polling every second (F14) | median 2.4 s, nine in ten within 3.8 s, slowest 4.4 s | five seconds, nine in ten: met |
+| `/answers/belief-change` on a question of 1,002 records (498 claims, each with its evidence and source, in the answer), asked 20 times | `just measure`, as above | median 14 ms, slowest 46 ms (26 ms and 255 ms on the first run, cold) | one second: met |
+| The graph database emptied and rebuilt from the topic: 3,752 nodes and 11,350 edges | `just rebuild` | about six seconds; the same answer before and after, byte for byte | none set |
+
+One at a time, the time to the graph is the consumer's poll and the same for every record. In a burst it is the poll and then the queue behind it. It is ankka's to shorten further.
+
 ## Requests
 
-What this application would like from the platform, to be written to `notes/ankka-requests.md` when
-the build exists. None blocks this feature.
+What this application would like from the platform. Each is written out, with what it would remove
+from this repository, in [`notes/ankka-requests.md`](../../notes/ankka-requests.md). None blocks
+this feature.
 
 **To ankka**
 
@@ -384,3 +449,17 @@ the build exists. None blocks this feature.
    (R10).
 7. A documented way to run a sink-only pipeline without Kubernetes, with its topic created
    compacted (R7).
+
+**To ankka, found while building**
+
+10. A setting of ankka's own for how often a consumer over an entity's state polls, with a default
+    shorter than three seconds, or state changes pushed as events are. Today the service sets
+    Pekko's `refresh-interval` itself (F14).
+11. A step body of more than four values in `GherkinSuite` (F10).
+
+**A release**
+
+8. An ankka release that carries what has merged since `v0.10.0`: `ankka-auth-oidc` (F1), and a
+   `GherkinSuite` that takes one file (F2). Both are on ankka's `main` today.
+9. ankka-flow's container packages made public, so a released sidecar can be pulled without a
+   credential (F8).

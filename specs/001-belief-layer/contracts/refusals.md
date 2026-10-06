@@ -38,9 +38,9 @@ What the service says when it does not accept a write or cannot answer a read, o
 
 | Rule | Status | When |
 |---|---|---|
-| `id.format` | 422 | an identifier is not 1 to 100 characters of `[A-Za-z0-9._-]` starting with a letter or digit, or is over the shorter limit of its kind (a market's 60, an outcome name's 20); `names.limit` gives it |
+| `id.format` | 422 | an identifier is not 1 to 64 characters of `[A-Za-z0-9._-]` starting with a letter or digit, or is over the shorter limit of its kind (a market's 32, an outcome name's 16); `names.limit` gives it |
 | `id.held-by-another` | 409 | the identifier is held by a record that differs from the one sent |
-| `dated.later-than-now` | 422 | `dated` or `observedAt` is later than the service's clock |
+| `dated.later-than-now` | 422 | `dated` or `observedAt` is later than the service's clock; `names.now` gives it |
 | `text.length` | 422 | a text field is empty or over its limit, an evidence's excerpt over `REASONING_EXCERPT_LIMIT` included; `names` gives the field and the limit |
 
 **Questions and holders**
@@ -50,6 +50,7 @@ What the service says when it does not accept a write or cannot answer a read, o
 | `question.hypotheses.at-least-two` | 422 | a question is opened with fewer than two hypotheses |
 | `question.not-held` | 422 | a hypothesis is added to a question that is not held |
 | `question.hypothesis.dated-before-question` | 422 | a hypothesis is dated before its question |
+| `holder.not-held` | 422 | a writer is added to a holder that is not held |
 | `holder.kind.not-in-vocabulary` | 422 | the kind is not a holder kind the vocabulary names |
 | `holder.writer.does-not-speak` | 403 | the writer does not speak for the holder it writes as, or adds a writer to |
 
@@ -69,9 +70,11 @@ What the service says when it does not accept a write or cannot answer a read, o
 | `claim.derives-from.not-held` | 422 | a named piece of evidence is not held |
 | `claim.stance.none` | 422 | no stance is taken |
 | `claim.stance.hypothesis-not-held` | 422 | |
+| `claim.stance.unknown` | 422 | a stance is neither `supports` nor `contradicts` |
 | `claim.stance.twice-on-one-hypothesis` | 422 | two stances are taken on one hypothesis |
 | `claim.revises.not-held` | 422 | |
 | `claim.revises.itself` | 422 | |
+| `claim.dated.not-before-hypothesis` | 422 | the claim is dated before a hypothesis it takes a stance on |
 | `claim.dated.not-before-evidence` | 422 | the claim is dated before a piece of evidence it derives from |
 | `claim.dated.not-before-revised` | 422 | the claim is dated before the claim it revises |
 
@@ -86,6 +89,7 @@ What the service says when it does not accept a write or cannot answer a read, o
 | `belief.rests-on.not-held` | 422 | a named claim is not held |
 | `belief.rests-on.claim-twice` | 422 | a claim is named twice |
 | `belief.rests-on.other-question` | 422 | a named claim takes no stance on a hypothesis of the belief's question |
+| `belief.dated.not-before-hypothesis` | 422 | the revision is dated before its hypothesis |
 | `belief.dated.not-before-claim` | 422 | the revision is dated before a claim it rests on |
 | `belief.dated.not-before-current` | 422 | the revision is dated before the one it follows |
 | `belief.follows.not-current` | 409 | `follows` is not the current revision; `names.current` gives it |
@@ -104,6 +108,8 @@ A withdrawal of a record already withdrawn answers `200` with the record: it is 
 | Rule | Status | When |
 |---|---|---|
 | `market.question.not-held` | 422 | |
+| `market.not-held` | 422 | a price observation or a resolution names a market that is not held |
+| `market.dated.not-before-hypothesis` | 422 | the market is dated before a hypothesis it offers an outcome for |
 | `market.outcome.none` | 422 | a market is opened with no outcome |
 | `market.outcome.name-twice` | 422 | two outcomes have one name |
 | `market.outcome.hypothesis-twice` | 422 | two outcomes are for one hypothesis |
@@ -114,6 +120,7 @@ A withdrawal of a record already withdrawn answers `200` with the record: it is 
 | `market.resolution.evidence.none` | 422 | |
 | `market.resolution.evidence.not-held` | 422 | |
 | `market.resolution.dated.not-before-evidence` | 422 | |
+| `market.resolution.dated.not-before-market` | 422 | the resolution is dated before its market |
 | `market.resolution.revises.not-current` | 409 | `revises` is not the market's current resolution, or is absent when there is one |
 
 **Reads**
@@ -122,6 +129,11 @@ A withdrawal of a record already withdrawn answers `200` with the record: it is 
 |---|---|---|
 | `answer.revisions.of-two-beliefs` | 422 | `from` and `to` are revisions of different beliefs; `names` gives both beliefs |
 | `answer.beliefs.in-two-hypotheses` | 422 | a comparison names beliefs in different hypotheses |
+| `answer.revision.later-than-asked` | 422 | a revision named by `from` or `to` is dated later than `asOf`, or was recorded later than `asRecordedBy`; `names` gives both of its times |
+| `time.format` | 422 | `asOf`, `asRecordedBy` or `after` is not an ISO-8601 instant, or `after` is left out; `names` gives the parameter |
+| `market.not-resolved` | 404 | the resolution of a market that has none is asked for |
+| `record.not-held` | 404 | a read names a record that is not held; `names` gives its kind and identifier |
+| `command.refused` | as the entity says | an entity refused a command with no rule of its own; it should not occur |
 | `graph.unavailable` | 503 | |
 
 ## Properties a test holds

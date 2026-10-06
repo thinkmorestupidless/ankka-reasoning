@@ -1,0 +1,90 @@
+{
+  "name": "launch-example",
+  "about": "The worked example the features share. Every name, number and date in it is made up.",
+  "steps": [
+    {
+      "post": "/questions",
+      "body": {
+        "id": "launch",
+        "statement": "Will Company X launch Product Y this year?",
+        "hypotheses": [
+          { "id": "yes", "statement": "it launches this year" },
+          { "id": "no", "statement": "it does not launch this year" }
+        ],
+        "dated": "2026-05-01T09:00:00Z"
+      }
+    },
+    { "post": "/holders", "body": { "id": "agent-a", "kind": "agent", "name": "agent-a" } },
+    { "post": "/sources", "body": { "id": "company-x-filings", "name": "Company X filings" } },
+    { "post": "/sources", "body": { "id": "regulator", "name": "the regulator" } },
+    {
+      "post": "/evidence",
+      "as": "filing",
+      "body": {
+        "source": "company-x-filings",
+        "locator": "https://filings.example/company-x/2026-q1",
+        "excerpt": "Regulatory approval for Product Y remains pending; no launch date is committed.",
+        "author": "Company X",
+        "publishedAt": "2026-05-04T07:00:00Z",
+        "observedAt": "2026-05-04T09:00:00Z"
+      }
+    },
+    {
+      "post": "/claims",
+      "body": {
+        "id": "launch.pending",
+        "holder": "agent-a",
+        "statement": "approval is pending and the launch date is uncertain",
+        "derivesFrom": ["@filing"],
+        "stances": [{ "hypothesis": "launch/yes", "stance": "contradicts" }],
+        "dated": "2026-05-04T09:00:00Z"
+      }
+    },
+    {
+      "post": "/beliefs/revisions",
+      "body": {
+        "id": "agent-a.launch.1",
+        "holder": "agent-a",
+        "hypothesis": "launch/yes",
+        "probability": 0.38,
+        "restsOn": [{ "claim": "launch.pending" }],
+        "dated": "2026-05-04T09:00:00Z"
+      }
+    },
+    {
+      "post": "/evidence",
+      "as": "notice",
+      "body": {
+        "source": "regulator",
+        "locator": "https://regulator.example/notices/1187",
+        "excerpt": "Notice 1187: Product Y is approved for sale.",
+        "publishedAt": "2026-05-11T08:00:00Z",
+        "observedAt": "2026-05-11T09:00:00Z"
+      }
+    },
+    {
+      "post": "/claims",
+      "body": {
+        "id": "launch.barrier-gone",
+        "holder": "agent-a",
+        "statement": "the approval barrier has gone",
+        "derivesFrom": ["@notice"],
+        "stances": [{ "hypothesis": "launch/yes", "stance": "supports" }],
+        "revises": "launch.pending",
+        "dated": "2026-05-11T09:00:00Z"
+      }
+    },
+    {
+      "post": "/beliefs/revisions",
+      "body": {
+        "id": "agent-a.launch.2",
+        "holder": "agent-a",
+        "hypothesis": "launch/yes",
+        "probability": 0.61,
+        "restsOn": [{ "claim": "launch.barrier-gone" }],
+        "follows": "agent-a.launch.1",
+        "dated": "2026-05-11T09:00:00Z"
+      }
+    }
+  ]
+}
