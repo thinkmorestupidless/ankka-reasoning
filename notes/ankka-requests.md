@@ -80,42 +80,30 @@ events are.
 
 **Would remove.** Nothing in code; one step expression would say what it means.
 
-### 13. An autonomous agent's definition overridden per instance or per task (process layer)
+### 13. Blueprints and runs (process layer)
 
-**Today.** Nothing is built. The process layer would hold a reasoning blueprint as a record, and a
-run of it as a record, carried out by code deployed once. An autonomous agent's instructions, model,
-accepted task types and budget are fixed on its companion, and its tools on its class
-(ankka's `docs/reference/limitations.md`: "no per-instance overrides of a definition"). Only a
-task's instructions and attachments vary. A role that loops on its own would be a request agent
-called from a workflow step, so a crash runs the step's whole loop again.
+**Today.** Nothing is built. The process layer needs reasoning patterns (a loop of thinking and
+acting, fan out and gather, map and reduce, propose and critique) run from a blueprint that is held
+as data, with each run held and linked to the version of the blueprint it ran. None of that is about
+reasoning, so it is asked of ankka rather than built here; [`use-cases.md`](use-cases.md) has the
+reasons and the two use-cases. Three things ankka lacks today would each be a way round here:
 
-**Asked.** Instructions, model, a subset of the agent's tools and the iteration budget given per
-instance or per task.
+- an autonomous agent's instructions, model, tools and budget are fixed on its companion and its
+  class (ankka's limitations: "no per-instance overrides of a definition"), so a role that loops on
+  its own would be a request agent inside a workflow step, and a crash would run the whole loop
+  again;
+- a judgment is asked only from an agent's handler, so a critique or a scoring step would call an
+  agent whose only work is to ask one; ankka's roadmap lists a judgment client for workflows as
+  unowned;
+- a tool is code, or an MCP server an agent lists when its service starts (ankka's feature 029), so
+  a blueprint could name only tools its service was built or started with.
 
-**Would remove.** The request agent standing in for a role that loops, and the repeated model
-calls after a crash.
+**Asked.** Blueprints and runs in ankka: shapes of control flow in the platform, blueprints held and
+versioned, roles whose instructions, model, tools and budget come from the blueprint, steps that
+ask judgments, and runs started by a request, a schedule or a record. Specified in ankka.
 
-### 14. Tools as data (process layer)
-
-**Today.** Nothing is built. A request agent's effect takes its instructions, model and tools at
-run time, but a `FunctionTool` can only be built in code: `FunctionTool.raw` is
-`private[ankka]` and the public builders are typed at compile time. A blueprint could choose among
-the tools compiled into this service and could name no other.
-
-**Asked.** A public way to build a tool from a schema and a call to another service's endpoint, or
-the MCP tools ankka's spec 029 drafts.
-
-**Would remove.** Every tool a blueprint names having to be written into this service.
-
-### 15. A judgment asked from a workflow step (process layer)
-
-**Today.** Nothing is built. A judgment is asked only from an agent's handler, so a workflow step
-that gates on one calls an agent whose only work is to ask it. ankka's roadmap lists a judgment
-client for workflows as out of scope for its feature 018 and unowned.
-
-**Asked.** A judgment client a workflow step can call.
-
-**Would remove.** The agent that exists only to ask a judgment for a critique or a scoring step.
+**Would remove.** Everything this repository would otherwise need to run a pattern. What stays here
+is the projection of runs into the graph and the tools that write reasoning records.
 
 ## To ankka-flow
 
