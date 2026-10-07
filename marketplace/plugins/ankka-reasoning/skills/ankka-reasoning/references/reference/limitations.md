@@ -26,10 +26,10 @@ deliberate. Each entry says how the system behaves today, so a reader can plan r
 
 ## What is unproven
 
-- **It has never been deployed to a cluster.** The pipeline blueprint is accepted by `flow verify`
-  and the service descriptor decodes under ankka's own rules, and both are tested. The steps on
-  [Deploy on ankka](../deploy/deploy-on-ankka.md) have not been run end to end. Everything else in
-  this documentation was run on a laptop, with Postgres, Kafka, Neo4j and the merge sink in
+- **It has been deployed to a local cluster only.** The steps on
+  [Deploy on ankka](../deploy/deploy-on-ankka.md) were run against a kind installation of ankka
+  and ankka-flow on a laptop, with release 0.1.1. No cloud installation has run it. Everything else
+  in this documentation was run on a laptop, with Postgres, Kafka, Neo4j and the merge sink in
   containers.
 - **Time to the graph is measured on a laptop only.** Under a burst of 555 writes, nine in ten
   records were in the graph within 3.8 seconds of their `201` and the slowest took 4.4. The floor

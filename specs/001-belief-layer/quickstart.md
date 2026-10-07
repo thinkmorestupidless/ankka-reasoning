@@ -106,7 +106,7 @@ neo4j-up`:
 
 ```bash
 flow verify deploy/pipeline/blueprint.conf --conf deploy/pipeline/kind.conf
-flow generate deploy/pipeline/blueprint.conf --conf deploy/pipeline/kind.conf -n reasoning | kubectl apply -f -
+flow generate deploy/pipeline/blueprint.conf --conf deploy/pipeline/kind.conf -n ankka-reasoning -o pipeline.yaml && kubectl apply -f pipeline.yaml
 just images && REASONING_DEPLOY_KAFKA=<broker> REASONING_DEPLOY_NEO4J_URI=<bolt address> just descriptors
 ankka services apply -f target/deploy/service.json --project reasoning
 just seed launch-example https://reasoning-reasoning.127.0.0.1.sslip.io:8443
@@ -156,7 +156,24 @@ service on `:9000`, then:
 | `just measure` | in research.md, Measurements |
 | `just rebuild` | 3,752 nodes and 11,350 edges back in about six seconds; an explanation asked before and after was the same, byte for byte |
 
-**Tier 5. Not run.** This laptop's `kubectl` context pointed at a cluster that is not the local
-one, and nothing here was going to switch it or deploy through it. `flow verify` accepts the
-blueprint and `DeploymentSuite` decodes the descriptor under ankka's rules; a deployment through
-the gateway is unproven (research F15).
+**Tier 5.** Run on 2026-10-07 against the local kind installation (ankka and ankka-flow at their
+`main` of the day, `ankka-flow-sidecar:latest`), with the image and descriptor of release 0.1.1,
+through a kubeconfig holding only that cluster's context.
+
+| Step | Seen |
+|---|---|
+| `just neo4j-up` in ankka-flow | Neo4j in `neo4j`, the Secret `neo4j-local` in `shop`; copied into `ankka-reasoning` |
+| `ankka projects create reasoning` | created; no namespace until the first service is applied (F18) |
+| `ankka services apply` with the release's descriptor | `ankka-reasoning` namespace created; pod `Init:0/1` until its secret existed |
+| `flow verify` / `flow generate` | verified; piping `generate` to `kubectl` refused (F19), `-o pipeline.yaml` applied; `aflow` Ready in 25 s, sink pod running |
+| the secret `reasoning-graph` | service Ready within a minute; every graph consumer started against `kafka.kafka.svc:9092` |
+| the topic | created by the pipeline with `cleanup.policy=compact`, `max.compaction.lag.ms=86400000`, 3 partitions |
+| a port-forward with plain HTTP, then TLS without a client certificate | empty reply, then a TLS alert: every port is mutual TLS |
+| `ankka services expose`, then `curl` through the gateway | `401`, `error="a caller through the gateway cannot be identified as a writer yet"` (F1, as designed) |
+| the same calls with the shopping cart sample's service certificate | writer `service:shoppingcart/cart`; a source `201`; `/graph/wait` caught up in 3.2 s |
+| the launch example, record by record, as that writer | 10 of 10 `201`; `/graph/wait` for `agent-a.launch.2` caught up in 2.5 s |
+| `/answers/belief-change` | 0.38 and 0.61, the barrier-gone claim with the regulator's notice newly rested on, the pending claim no longer rested on and revised: the same as tier 4 |
+| `/answers/belief` as of 6 May | 0.38, resting on `launch.pending` |
+| the trace query in the cluster's `cypher-shell` | one row: the claim, the notice's excerpt, "the regulator" |
+
+Not run: a cloud installation, and a writer that is a person (F1).

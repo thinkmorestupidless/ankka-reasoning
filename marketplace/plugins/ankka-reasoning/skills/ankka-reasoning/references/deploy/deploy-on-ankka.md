@@ -5,13 +5,16 @@
 Source: https://reasoning.ankka.cloud/deploy/deploy-on-ankka/
 ankka-reasoning deploys as two things: an [ankka-flow](https://flow.ankka.cloud/) pipeline that is the
 Neo4j merge sink alone, and one [ankka](https://docs.ankka.cloud/) service, `reasoning`. The pipeline
-goes first, because it creates the topic the service publishes to.
+has to exist before the service publishes anything, because it creates the topic the service publishes
+to, compacted.
 
-These steps have not been run end to end against a cluster. The blueprint is accepted by `flow verify`
-and the service descriptor passes the same validation `ankka services apply` applies, both checked by
-the repository's tests, but no deployment through them has been made. The steps are the ones ankka and
-ankka-flow document for any service and any pipeline; treat the first deployment as a test of this
-page. [Limitations](../reference/limitations.md) says the same.
+The order on this page is the one that works: the project, then the service, then the pipeline, then
+the secrets. The service goes before the pipeline because ankka creates a project's namespace when the
+first service is applied to it, and the pipeline and the secrets go in that namespace; the service's
+pod waits for its secret and publishes nothing until it starts. These steps were run against a local
+kind installation of ankka and ankka-flow, with the image and descriptor of release 0.1.1, and the
+launch example recorded and explained through them. They have not been run against a cloud
+installation.
 
 ## What the installation must have
 
@@ -26,7 +29,18 @@ The service's writers in a cluster are other ankka services in the installation.
 gateway is refused with `401`, so there is nothing to gain from exposing the service yet;
 [Writers, holders and stewards](../concepts/writers-and-holders.md) says why.
 
-## Deploy the pipeline first
+## Create the project and apply the service
+
+```bash
+ankka projects create reasoning -O <organization>
+ankka services apply -f ankka-reasoning-<version>-service.json -p reasoning
+```
+
+The descriptor is the one attached to the release, with the broker and the graph database's address
+written in: [Get the image and the descriptor](#get-the-image-and-the-descriptor) says how. Applying
+it creates the namespace `ankka-reasoning`. The pod does not start yet: its secret does not exist.
+
+## Deploy the pipeline
 
 The blueprint is
 [`deploy/pipeline/blueprint.conf`](https://github.com/thinkmorestupidless/ankka-reasoning/blob/main/deploy/pipeline/blueprint.conf):
@@ -64,16 +78,23 @@ ankka-flow's own `just neo4j-up` created the Secret `neo4j-local`, that file is
 flow.streamlets.graph.config { secret = neo4j-local }
 ```
 
-Verify, then generate the resource and apply it into the namespace of the project the service will
-run in:
+Verify, then generate the resource into a file and apply it into the project's namespace:
 
 ```bash
 flow verify deploy/pipeline/blueprint.conf --conf deploy/pipeline/kind.conf
-flow generate deploy/pipeline/blueprint.conf --conf deploy/pipeline/kind.conf -n ankka-reasoning \
-  | kubectl apply -f -
+flow generate deploy/pipeline/blueprint.conf --conf deploy/pipeline/kind.conf -n ankka-reasoning -o pipeline.yaml
+kubectl apply -f pipeline.yaml
+kubectl -n ankka-reasoning get aflow
 ```
 
-The sink's consumer group is `reasoning-graph.graph.in`.
+```text
+NAME              PIPELINE          PHASE   AGE
+reasoning-graph   reasoning-graph   Ready   25s
+```
+
+The file, not a pipe: `flow` 0.4.0 prints its note about the topic on standard output when it writes
+the resource there too, and `kubectl` then refuses the stream for an unknown field `note`. The sink's
+consumer group is `reasoning-graph.graph.in`.
 
 ## Get the image and the descriptor
 
@@ -116,36 +137,53 @@ The descriptor, before it is filled in:
 }
 ```
 
-## Create the secret and deploy the service
+## Create the secrets
 
-The service reads the graph database with credentials from a Secret, `reasoning-graph`, in the
-project's namespace. It only ever reads, so give it a Neo4j user that can do nothing else.
+The sink reaches Neo4j through the Secret the deploy-time configuration names, which has to be in the
+project's namespace too: on a local cluster, a copy of `neo4j-local` from the namespace ankka-flow
+created it in. The service reads the graph database with credentials from a Secret of its own,
+`reasoning-graph`. It only ever reads, so give it a Neo4j user that can do nothing else.
 
 ```bash
-ankka projects create reasoning -O <organization>
 kubectl -n ankka-reasoning create secret generic reasoning-graph \
   --from-literal=username=<neo4j user> \
   --from-literal=password=<its password>
-ankka services apply -f target/deploy/service.json -p reasoning
+ankka services list -p reasoning
 ```
 
-The service needs nothing else set. Its database and its HTTP port are ankka's, supplied by the
+```text
+NAME       STATUS  INSTANCES  GEN  IMAGE                                              HOSTNAME
+reasoning  Ready   1/1        1    ghcr.io/thinkmorestupidless/ankka-reasoning:0.1.1  -
+```
+
+The service is Ready about a minute after its secret exists. It needs nothing else set. Its database and its HTTP port are ankka's, supplied by the
 platform. [Configuration](../reference/configuration.md) lists every setting, among them
 `REASONING_STEWARDS`, the writers who may withdraw the text of any record.
 
 ## Check it from another service
 
-Another ankka service in the installation reaches it by name, as ankka documents under
-[Calling services](https://docs.ankka.cloud/build/calling-services/), and is the writer
-`service:<its project>/<its name>`. The first thing to ask is the vocabulary, which needs nothing
-recorded:
+Every port in an ankka installation is mutual TLS, so the service can be reached only by the gateway
+or by another ankka workload presenting the certificate the installation issued it. Another ankka
+service reaches it at `https://reasoning.ankka-reasoning.svc.cluster.local:9000`, as ankka documents
+under [Calling services](https://docs.ankka.cloud/build/calling-services/), and is the writer
+`service:<its project>/<its name>`: the identity in its certificate, which nothing in a request can
+claim. A `curl` from inside another service's pod, with that pod's service certificate:
 
 ```bash
-curl -s http://reasoning.ankka-reasoning.svc.cluster.local/graph/vocabulary
+curl -s --cacert ca.crt --cert tls.crt --key tls.key \
+  https://reasoning.ankka-reasoning.svc.cluster.local:9000/sources -d '{"id":"cluster-source","name":"a source"}'
+curl -s --cacert ca.crt --cert tls.crt --key tls.key \
+  https://reasoning.ankka-reasoning.svc.cluster.local:9000/graph/wait -d '{"kind":"source","id":"cluster-source"}'
 ```
 
-Then register a source and wait for it, as [Run it on your machine](../get-started/run-locally.md)
-does. A wait that answers `caughtUp: true` has crossed the service, Kafka, the sink and Neo4j.
+```json
+{"id":"cluster-source","name":"a source","dated":"2026-10-07T06:21:00.009Z","recordedAt":"2026-10-07T06:21:00.009Z","writer":"service:shoppingcart/cart"}
+{"caughtUp":true,"waitedMs":3198,"missing":[]}
+```
+
+A wait that answers `caughtUp: true` has crossed the service, the installation's Kafka, the sink and
+Neo4j. Exposed with `ankka services expose`, the service answers a caller through the gateway with
+`401`, because a person's token is not verified yet.
 
 ## What each failure looks like
 
