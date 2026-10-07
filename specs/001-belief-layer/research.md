@@ -408,11 +408,15 @@ Outcomes of the claims above, and what else building it found. Each changed the 
 
 **F14. The time to the graph is the consumer's poll.** A graph consumer over a key value entity's state is fed by polling, and Pekko's `refresh-interval` defaults to three seconds. Under a burst of 555 writes that put nine in ten at 5.1 s, over SC-007's five. The service sets `pekko.persistence.r2dbc.refresh-interval = 1s` in its `application.conf`, as ankka's control plane sets it to 500 ms for itself; it is the polling knob and not the `behind-current-time` guard. Request 10 asks ankka to own the setting.
 
-**F15. Tier 5 of the quickstart was not run.** The laptop's `kubectl` context pointed at a cluster that is not the local one. The blueprint is verified by `flow verify` and the descriptor by ankka's own decoding rules (`DeploymentSuite`); what tier 5 would add, a deployment through the gateway, is unproven.
+**F15. Tier 5 of the quickstart was run a day after the rest,** on 2026-10-07, against the local kind installation with release 0.1.1; what it found is F18 and F19, and the record is at the end of quickstart.md. It was not run on 2026-10-06 because the laptop's `kubectl` context pointed at a cluster that is not the local one; the run used a kubeconfig holding only the kind cluster's context. The gateway refuses a caller with `401` as F1 says; a writer that is another ankka service is identified by its certificate and everything from the write to the explanation works through the cluster's Kafka, the sink and Neo4j.
 
 **F16. On a laptop that already runs a Postgres, the compose file's has to move.** `REASONING_POSTGRES_PORT` moves it for `just up` and `just run` both.
 
 **F17. A wait ended while the record at the far end of an edge was still a placeholder.** The sink applies an edge before the node it points to when their deltas arrive in that order, and creates a placeholder for the node. `/graph/wait` counted the edge as held, so a writer that recorded a source and then evidence could wait for the evidence and find it linked to a source with no name yet. The first run in CI found it; it had never shown on a laptop. An edge now counts only when the node it points to is held and is not a placeholder.
+
+**F18. A project's namespace exists only once a service is applied to it.** The deploy contract puts the pipeline first, so that the topic is created compacted before the service publishes, and the pipeline and the secrets go in the project's namespace. The order that works is: create the project, apply the service (its pod waits for a secret that does not exist yet and publishes nothing), deploy the pipeline, create the secrets. The deploy page says so.
+
+**F19. `flow generate` 0.4.0 prints its note on standard output when the resource goes there too.** `flow generate … | kubectl apply -f -`, which ankka-flow's own page shows, is refused by `kubectl` for an unknown field `note`: the note about the compacted topic is in the stream. With `-o <file>` the note goes to standard error and the file is clean. Request 12.
 
 ## Measurements
 
@@ -458,6 +462,11 @@ this feature.
     shorter than three seconds, or state changes pushed as events are. Today the service sets
     Pekko's `refresh-interval` itself (F14).
 11. A step body of more than four values in `GherkinSuite` (F10).
+
+**To ankka-flow, found deploying**
+
+12. `flow generate` writing its notes to standard error when the resource goes to standard output,
+    so that piping to `kubectl` works as its page shows (F19).
 
 **A release**
 

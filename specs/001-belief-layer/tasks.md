@@ -261,8 +261,8 @@ with its outcome, authority, evidence and source, and lists each holder's last e
 - [X] T071 [P] Create `deploy/service.json` per contracts/deployment.md "The service descriptor" and `test/DeploymentSuite.scala` decoding it with ankka's descriptor rules (`ankka-controlplane-api` as a test dependency in `project/Dependencies.scala`)
   - Done. `sbt deployDescriptors` also writes in `REASONING_DEPLOY_KAFKA` and `REASONING_DEPLOY_NEO4J_URI`.
 - [X] T072 [P] Create `notes/ankka-requests.md` from research.md "Requests", one section per request with what it would remove from this repository
-- [ ] T073 Run quickstart tiers 4 and 5 by hand, tier 5 on kind beside ankka and ankka-flow, and record what was run and seen at the end of `specs/001-belief-layer/quickstart.md`
-  - **Tier 4 run; tier 5 not run.** What was run and seen is at the end of quickstart.md. Tier 5 was left: this machine's `kubectl` context pointed at a cluster that is not the local one, and nothing here was going to change that or deploy through it.
+- [X] T073 Run quickstart tiers 4 and 5 by hand, tier 5 on kind beside ankka and ankka-flow, and record what was run and seen at the end of `specs/001-belief-layer/quickstart.md`
+  - Tier 4 run on 2026-10-06, tier 5 on 2026-10-07 against the local kind installation with release 0.1.1 (research F15, F18, F19). What was run and seen is at the end of quickstart.md.
 - [X] T074 Close the V-list: under `## Found during implementation` in research.md, a table of V1 to V11 with each outcome (passed, not verified, settled differently) and anything else implementation found
 - [X] T075 Update `README.md` (status, how to run it, "What is here now"), `CLAUDE.md` (a Commands section with the sbt and just commands that now exist) and `../ankka-brain/repos/ankka-reasoning.md` (stage, the ankka and ankka-flow pins, the open questions)
 - [X] T076 Tick quickstart.md's reviewer's checklist: `sbt scalafmtCheckAll test` from a clean checkout, `just features`, each "to see it can fail" tried once
