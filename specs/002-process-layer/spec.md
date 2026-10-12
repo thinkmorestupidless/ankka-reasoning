@@ -6,14 +6,14 @@
 
 **Status**: Draft
 
-**Input**: User description: "The process layer, proven by a appraiser over a golden set of
+**Input**: User description: "The process layer, proven by an appraiser over a golden set of
 documents. ankka now runs blueprints: workers and steps as data, runs as records, a tool told its
 run, consumers that follow runs and blueprint versions. ankka's own example (the research digest)
 covers what needs no reasoning graph; this feature is what only a reasoning graph gives a run.
 Three things are built here: tools a blueprint names that write reasoning records as the holder a
 worker speaks for; the process layer as a projection of ankka's blueprint versions and runs, every
 record a run writes linked to its run; and a golden set, the worked example and the acceptance
-test: the launch question with two dated tranches of documents, a appraiser blueprint run over
+test: the launch question with two dated tranches of documents, an appraiser blueprint run over
 each, a second blueprint version for a second holder, and the three questions answered from
 records a process wrote. Offline the model is scripted from the golden set's expected readings; a
 separate, optional live suite runs a real model. Scoring is the next feature."
@@ -72,7 +72,7 @@ own nodes; answers are records.
 - Q: The critique passes a claim only if it derives from evidence "this run recorded"; but evidence an earlier run recorded is recorded once and keeps the earlier run's act, so a later run reading the same document would fail. Which gives? → A: The critique checks by the run's input: every claim derives from evidence recorded from a document of this run's tranche, whoever recorded it and whenever. The act stays the first recorder's.
 - Q: A run's node "shows its run status and when it ended once it has", which is a held record changing; and an act must link to a run already held. What is a run as a record of this service? → A: Two records. The run (run id, blueprint, version, when started) is held once, when the service first learns of it from ankka's run record or from a tool's first call, whichever comes first; its run ending (run status, when ended), naming the run, is held once when the run ends. A run with no ending is running. Nothing is updated.
 - Q: The three questions' answers come back "with the act and the run that wrote it", but the belief layer's answers cannot name the process layer. Which layer gives an answer its acts? → A: The process layer offers each belief-layer and market-layer answer again: the same answer, with each record's act, run, run ending and blueprint version attached where the record has one. A reader asks the process layer once. The lower layers' answers change in nothing.
-- Q: The critique's checks are decidable from records; is the critique a check the service makes, or a model's judgment? → A: A model's judgment, through ankka's critique step, with the two checks as its instructions: every claim derives from evidence recorded from a document of this tranche, every stance is on a hypothesis of the question. Offline the judgment is scripted to its verdict; in the live suite a real model judges.
+- Q: The critique's checks are decidable from records; is the critique a check the service makes, or a model's judgment? → A: A model's judgment, through a judgment step of ankka's, with the two checks as its instructions: every claim derives from evidence recorded from a document of this tranche, every stance is on a hypothesis of the question. Offline the judgment is scripted to its verdict; in the live suite a real model judges.
 - Q: Are the 24 proposed terms right, in particular *appraiser* (since *forecaster* is refused for holder), *act*, and *document* no longer refused for evidence? → A: All accepted as written. Refused: for run, execution and job; for act, attribution and authorship; for tranche, batch; for document, article and source text. *Forecaster* stays refused for holder.
 
 ## User Scenarios & Testing *(mandatory)*
@@ -144,7 +144,7 @@ topic and compare the two graphs.
 
 ---
 
-### User Story 3 - The golden set: a appraiser answers the three questions (Priority: P1)
+### User Story 3 - The golden set: an appraiser answers the three questions (Priority: P1)
 
 The golden set is two tranches of made-up documents about the launch question. The appraiser
 blueprint, run over the May tranche, reads each document, records evidence and states a claim
@@ -165,7 +165,7 @@ answering them about records a process wrote, rather than typed, is what this fe
 
 **Independent Test**: With a scripted model answering from the expected readings and no model key,
 run the appraiser twice for the first holder and twice for the second, let the graph catch up,
-and ask the four questions above; receive the answers the golden set says, made of held records
+and ask the three questions and the comparison; receive the answers the golden set says, made of held records
 only, and nothing dated or recorded out of order.
 
 **Acceptance Scenarios** *(each names a scenario in a living feature; none is written here)*:
@@ -221,8 +221,9 @@ with its act.
   run's*).
 - A run is sent twice under one run id: ankka runs it once, and every record it wrote is held
   once (*a run sent twice writes each record once*).
-- A run is cancelled, or fails, part way: the records it wrote stay held with their acts, the
-  run's ending is in the graph with its run status, and no belief revision is stated for it (*a run whose
+- A run fails part way: the records it wrote stay held with their acts, the run's ending is in
+  the graph with its run status, and no belief revision is stated for it. Nothing in this feature
+  cancels a run; a cancelled ending, were ankka to record one, is held as a failed one is (*a run whose
   critique fails revises no belief, and what it wrote stays held*; *a run is in the graph with
   the version it ran, its run status and when it started and ended*).
 - The critique fails: no belief is revised, the claims stay held, and the run is failed naming the
@@ -246,20 +247,22 @@ with its act.
 
 **Tools a blueprint names**
 
-- **FR-001**: The service MUST register, for blueprints, a tool to record evidence (source,
-  locator, excerpt, author, the time published, the time observed), a tool to state a claim (a
-  statement, the evidence it derives from, a stance on each of one or more hypotheses, optionally
-  the claim it revises), and a tool to revise a belief (a hypothesis, a probability, the claims it
-  rests on with optional weights, the belief revision it follows). Each writes the belief-layer
-  record a writer would send, checked by the same rules (FR-001 to FR-014 of the belief layer),
-  and refuses the same way.
-- **FR-002**: A tool called in a run MUST write as the holder the run's worker speaks for, and MUST
-  write nothing when called outside any run, saying so.
+- **FR-001**: The service MUST register, for blueprints, a tool to record evidence, a tool to state
+  a claim and a tool to revise a belief. Each writes the belief-layer record a writer would send,
+  with every field that record carries (evidence: source, locator, excerpt, author, the time
+  published, the time observed; a claim: a statement, the evidence it derives from, a stance on
+  each of one or more hypotheses; a belief revision: a hypothesis, a probability, the claims it
+  rests on with optional weights, the belief revision it follows), checked by the same rules
+  (FR-001 to FR-014 of the belief layer), and refuses the same way. What a tool takes from the
+  worker and what it reads from the run is the plan's to settle; a claim a run states revises no
+  claim in this feature.
+- **FR-002**: A tool called in a run MUST write as the holder the run's input names, for which
+  every worker of that run speaks, and MUST write nothing when called outside any run, saying so.
 - **FR-003**: A blueprint MUST be a writer: every record a run of it writes names the blueprint as
-  the writer that sent it. A blueprint's registration MUST name the holder each of its workers
-  speaks for, and registering the blueprint MUST register each such holder, of kind agent, with
-  the blueprint as a writer that speaks for it; a holder already registered is left as it is, and
-  one the blueprint does not speak for is refused when stated as.
+  the writer that sent it. A blueprint's registration MUST name the holders it may be run for,
+  and registering the blueprint MUST register each such holder, of kind agent, with the blueprint
+  as a writer that speaks for it; a holder already registered is left as it is, and a run whose
+  input names a holder the blueprint does not speak for is refused when it writes.
 - **FR-004**: Every record a run writes MUST be held together with an act: a record of the process
   layer naming the run, the step, the worker, the blueprint version, the record written and the
   holder it was stated as. A record a run wrote is never held without its act, and an act names
@@ -269,7 +272,7 @@ with its act.
 **The process layer**
 
 - **FR-005**: The vocabulary MUST gain a process layer: a blueprint version node (name, version,
-  digest, when registered), a run node (run id, blueprint, version, when started), a run ending
+  digest, when registered), a run node (run id, blueprint, version, who started it, when started), a run ending
   node (run status, when ended) and an act node (step, worker), with edges only from its own
   nodes: run to blueprint version, run ending to run, act to run, act to the record it wrote, act
   to the holder it was stated as. The belief layer and the market layer MUST name nothing of it
@@ -306,7 +309,7 @@ with its act.
   and records it as evidence and states a claim with a stance; critiques the claims — every claim
   derives from evidence recorded from a document of this run's tranche, whoever recorded it and
   whenever, and every stance is on a hypothesis of the question — as a model's judgment through
-  ankka's critique step, given the claims, their evidence and the tranche's documents, with those
+  a judgment step of ankka's, given the claims, their evidence and the tranche's documents, with those
   two checks as its instructions — and revises the belief only when the critique passes, resting
   on the claims with weights and following the belief revision the input names, if any. Its input is a tranche, a holder, a question and optionally the belief
   revision to follow. A run whose critique fails is failed, naming the claim, and revises no
@@ -326,7 +329,8 @@ with its act.
 - **FR-013**: Every living feature of this repository MUST pass with no model key and no network,
   the golden set's included; the model is scripted from the expected readings, and the critique's
   verdict is scripted too.
-- **FR-014**: A separate suite, run only when a model key is set and never by the build, MUST run
+- **FR-014**: A separate suite, run only when a model key is set (today the text model's and the
+  judgment's, both) and never by the build, MUST run
   the same blueprint over the same golden set against a real model and assert only the direction
   of each holder's move, the critique passing, and every record held with its act; it is skipped,
   not failed, without a key.
@@ -366,7 +370,7 @@ with its act.
 |---|---|---|---|---|
 | of | run | blueprint version | | process |
 | ended | run ending | run | run status, when ended | process |
-| in | act | run | step, worker | process |
+| in | act | run | | process |
 | wrote | act | evidence, claim or belief revision, exactly one | | process |
 | as | act | holder | | process |
 
@@ -447,7 +451,7 @@ within the delta contract's rules.
 - Scoring: comparing versions or holders by the outcome a market resolves to. This feature keeps
   the version on every record so that the next can.
 - Starting a run from a record — a new claim on an open question, say. Runs here are started by a
-  request.
+  request. Cancelling a run.
 - The decision layer, challenges and assessing again (use-case 2, the cultivated food).
 - Fetching documents from anywhere; the golden set is checked in.
 - A tool that reads the graph for a worker, beyond the records a run's input names.

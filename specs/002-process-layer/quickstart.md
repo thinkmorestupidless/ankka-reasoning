@@ -1,0 +1,173 @@
+# Quickstart: validating the process layer
+
+Five tiers, as spec 001's [quickstart.md](../001-belief-layer/quickstart.md), each proving more
+with more running; a sixth needs model keys. Docker is required from tier 1 here, because ankka's
+test kit runs Postgres for a blueprint's runs. The routes are in
+[contracts/http-api.md](contracts/http-api.md), the appraiser in
+[contracts/blueprint.md](contracts/blueprint.md), the settings in
+[contracts/deployment.md](contracts/deployment.md).
+
+## Prerequisites
+
+JDK 21, sbt, Docker, `just`. An ankka release carrying blueprints, pinned in
+`project/Dependencies.scala` (research R1). For tier 6, `ANTHROPIC_API_KEY` and `TYPESAFE_API_KEY`.
+For tier 5, a kind cluster with ankka installed and the `ankka` command.
+
+## Tier 0 — the sink moved (several minutes)
+
+```bash
+sbt 'service/testOnly *SinkSmokeSuite *PublicationFeatures *SeededSetSuite'
+```
+
+The graph suites against ankka-contrib's sink image in place of ankka-flow's sidecar (R2), with
+nothing else of this feature built.
+
+Proves: every scenario of spec 001 passes under the new sink; `just rebuild` empties and refills
+the graph by raising the sink's version (V2, V3).
+
+To see it can fail: set `V.sinkImage` to a tag that does not exist, and every graph suite fails
+to start its container.
+
+## Tier 1 — components alone (a minute)
+
+```bash
+sbt process/test
+```
+
+Each process entity through its unit test kit; the appraiser registered against ankka's check
+(V4); the three tools called through their handlers inside `RunContext.within(...)` and outside it;
+the vocabulary's properties with the process layer composed and without it.
+
+Proves: a record a tool writes is held with its act, and not at all when the act's checks fail
+(R8); a tool in no run writes nothing; the process layer's edges leave its own nodes (FR-005);
+`belief` and `market` compile and pass with no `process` module on their path (SC-008).
+
+To see it can fail: give an `Act` node a property the vocabulary does not name, and the vocabulary
+suite goes red.
+
+## Tier 2 — the whole service, no graph (a few minutes)
+
+```bash
+sbt 'service/testOnly *ToolsFeatures'
+```
+
+The service under `AnkkaTestKit` with the test model and judgment providers, driven over HTTP by
+`features/process/tools.feature`: runs started by `POST /process/runs`, the model scripted from the
+golden set (R14).
+
+Proves: US1. Every rule in [contracts/refusals.md](contracts/refusals.md) is broken once and names
+itself; a run sent twice writes each record once (V12); evidence an earlier run recorded keeps its
+act.
+
+To see it can fail: remove the check that the blueprint speaks for the input's holder, and *a
+record stated as a holder the blueprint does not speak for is refused* goes red.
+
+## Tier 3 — the service, Kafka, the sink and Neo4j (several minutes)
+
+```bash
+sbt 'service/testOnly *RunsFeatures *GoldenSetFeatures *VocabularyFeatures *ProcessVocabularyQuerySuite'
+```
+
+Testcontainers start Kafka, Neo4j and the contrib sink image once for the run. `runs.feature`,
+`golden-set.feature` and the changed `vocabulary.feature` run against them.
+
+Proves: US2 and US3. A belief revision traces to its act, run and version (FR-007); an emptied and
+rebuilt graph holds the process layer (FR-008); the four runs give the four answers the golden set
+says (SC-001 to SC-004); the market resolved afterwards lists each holder's belief with its version
+(FR-015). `ProcessVocabularyQuerySuite` runs the Cypher printed on the vocabulary page as written.
+
+To see it can fail: publish `IN` from the run instead of the act, and *every kind of edge in the
+process layer runs from a node of the process layer* goes red; script the judgment to answer `no`
+for the approval document, and *the appraiser run over the June tranche revises the belief* goes
+red with the run failed naming the claim.
+
+## Tier 4 — on a laptop, by hand
+
+```bash
+just up                      # Postgres, Kafka with the compacted topic, Neo4j, the contrib sink
+just run                     # the service on :9000; without model keys every run fails at its first model call
+just seed golden-set         # the question, its sources, the market
+```
+
+With keys set in the environment (or skip to the scripted run below):
+
+```bash
+curl -s localhost:9000/process/runs -d '{"blueprint":"appraiser","runId":"appraiser-a-may","input":{"tranche":"may","holder":"appraiser-a","question":"launch","observedAt":"2026-05-20T09:00:00Z"}}'
+curl -s localhost:9000/process/runs/appraiser-a-may          # until "ending" appears
+curl -s localhost:9000/process/runs -d '{"blueprint":"appraiser","runId":"appraiser-a-june","input":{"tranche":"june","holder":"appraiser-a","question":"launch","follows":"appraiser-a-may.yes","observedAt":"2026-06-20T09:00:00Z"}}'
+curl -s localhost:9000/graph/wait -d '{"kind":"revision","id":"appraiser-a-june.yes"}'
+curl -s 'localhost:9000/process/answers/belief-change?from=appraiser-a-may.yes&to=appraiser-a-june.yes'
+```
+
+Expect a probability below one half then above it; the claim derived from the approval document
+newly rested on, with its evidence and source; and in `acts` that claim's act naming the step
+`read`, the worker `reader`, the run `appraiser-a-june` and version 1.
+
+Then version 2 for the second holder, and the comparison:
+
+```bash
+curl -s localhost:9000/process/appraiser/versions -d '{"instructions":"v2"}'
+# the two runs again for appraiser-b, then:
+curl -s 'localhost:9000/process/answers/comparison?hypothesis=launch/yes&a=appraiser-a&b=appraiser-b'
+```
+
+Expect the same claims under `both` with two weights, nothing under `onlyA` or `onlyB`, and in
+`acts` version 1 behind one holder's revision and version 2 behind the other's.
+
+Read the trace straight from the graph database:
+
+```bash
+docker compose exec neo4j cypher-shell -u neo4j -p reasoning-local-password \
+  "MATCH (r:BeliefRevision {id:'revision:appraiser-a-june.yes'})<-[:WROTE]-(a:Act)-[:IN]->(run:Run)-[:OF]->(v:BlueprintVersion) RETURN a.step, a.worker, run.id, v.version"
+```
+
+Then the rebuild and the measurement:
+
+```bash
+just rebuild                 # empty Neo4j, raise the sink's version, let it refill
+just measure-golden-set      # the four runs with a scripted model, timed: records to the graph with their acts (SC-009), the whole set (SC-006)
+```
+
+Proves: SC-006 (two minutes on a laptop), SC-009 (five seconds, nine in ten).
+
+## Tier 5 — beside ankka on kind
+
+```bash
+ankka projects create reasoning
+ankka projects topics set reasoning-graph --partitions 3 --cleanup compact -p reasoning
+ankka projects secrets set reasoning-graph username=neo4j password=- -p reasoning
+just images && just descriptors
+ankka services apply -f target/deploy/graph-sink.json --project reasoning
+ankka services apply -f target/deploy/service.json --project reasoning
+```
+
+Then the tier 4 commands against the gateway, with a token (people are writers from this ankka
+release, spec 001 F1 closed).
+
+Proves: the contrib sink is what a cluster runs; the descriptors are what a cluster accepts; a run
+through the cluster's model keys, set as project secrets, reaches the graph.
+
+## Tier 6 — the live suite
+
+```bash
+ANTHROPIC_API_KEY=… TYPESAFE_API_KEY=… sbt 'service/testOnly *LiveAppraiserSuite'
+```
+
+Without the keys the suite is skipped (tier 2 shows it skipped, not failed). With them, the
+appraiser runs for one holder over both tranches against the real providers.
+
+Proves: US4, each run once. SC-007's nine in ten: run it ten times and record the count below.
+
+## Reviewer's checklist
+
+- [ ] Tiers 0 to 3 pass from a clean checkout with `sbt test`; `LiveAppraiserSuite` is reported skipped.
+- [ ] Every scenario under `features/` is run by exactly one suite; none is ignored.
+- [ ] Each "to see it can fail" above was tried once and went red.
+- [ ] Tier 4's answers match the golden set's expected readings, value for value.
+- [ ] The measurements for SC-006, SC-007 and SC-009 are recorded at the end of `research.md`.
+- [ ] Every item in `research.md`'s "Verify first" has an outcome beside it.
+- [ ] `notes/ankka-requests.md` marks 8, 9 and 13 answered or moot and holds 14 to 17.
+
+## What was run
+
+*(written when it is)*
