@@ -24,25 +24,27 @@ class ServiceStartsSuite extends munit.FunSuite:
     assertEquals(settings.excerptLimit, 2000)
     assertEquals(settings.waitLimitMaxMs, 30000L)
     assertEquals(settings.stewards, Set.empty[String])
+    assertEquals(settings.appraiserHolders, Vector("appraiser-a", "appraiser-b"))
+    assertEquals(settings.goldenSet, None)
   }
 
   test("the service starts and is healthy with no model key and no judgment key") {
     val settings = Settings.from(ConfigFactory.load())
+    val agents =
+      ReasoningService.agents(settings, Providers.model(Map.empty), Providers.judgments(Map.empty))
     val server = HttpServer.at("127.0.0.1", 0)(
-      ReasoningService.endpoints(settings, Clock.system, GraphReader.none, publishing = false)*
+      ReasoningService.endpoints(
+        settings,
+        Clock.system,
+        GraphReader.none,
+        publishing = false,
+        agents = Some(agents)
+      )*
     )
     val kit =
       AnkkaTestKit.start(
         ReasoningService.components(settings, publishing = false),
-        Seq(
-          ProjectionRuntime(),
-          ReasoningService.agents(
-            settings,
-            Providers.model(Map.empty),
-            Providers.judgments(Map.empty)
-          ),
-          server
-        )
+        Seq(ProjectionRuntime(), agents, server)
       )
     try
       val port = server.boundPort.getOrElse(fail("the server did not bind"))

@@ -1,0 +1,39 @@
+{
+  "name": "golden-set",
+  "about": "The golden set's question, its sources and its market, for a laptop. The service registers the appraiser's holders and these sources itself when it starts; the question and the market it does not. Every name, number and date is made up.",
+  "steps": [
+    {
+      "post": "/questions",
+      "body": {
+        "id": "launch",
+        "statement": "Will Company X launch Product Y this year?",
+        "hypotheses": [
+          { "id": "yes", "statement": "it launches this year" },
+          { "id": "no", "statement": "it does not launch this year" }
+        ],
+        "dated": "2026-05-01T09:00:00Z"
+      }
+    },
+    { "post": "/sources", "body": { "id": "company-x-filings", "name": "Company X filings" } },
+    { "post": "/sources", "body": { "id": "regulator", "name": "the regulator" } },
+    { "post": "/sources", "body": { "id": "trade-press", "name": "the trade press" } },
+    { "post": "/sources", "body": { "id": "analyst-notes", "name": "analyst notes" } },
+    { "post": "/sources", "body": { "id": "supplier-calls", "name": "supplier earnings calls" } },
+    { "post": "/sources", "body": { "id": "rumour-mill", "name": "the rumour mill" } },
+    {
+      "post": "/markets",
+      "body": {
+        "id": "launch-market",
+        "question": "launch",
+        "venue": "Example Exchange",
+        "outcomes": [
+          { "outcome": "YES", "hypothesis": "launch/yes" },
+          { "outcome": "NO", "hypothesis": "launch/no" }
+        ],
+        "resolutionCriteria": "Resolves YES if Company X announces general availability of Product Y this year.",
+        "closesAt": "2026-12-31T00:00:00Z",
+        "dated": "2026-05-02T09:00:00Z"
+      }
+    }
+  ]
+}

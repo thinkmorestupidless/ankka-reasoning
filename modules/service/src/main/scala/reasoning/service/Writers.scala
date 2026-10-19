@@ -30,7 +30,7 @@ object Writers:
     case Caller.Gateway                     => None
 
   /** The writer of the records a run of the blueprint `name` writes. */
-  def blueprint(name: String): String = s"blueprint:$name"
+  def blueprint(name: String): String = reasoning.process.domain.Ids.blueprintWriter(name)
 
   /** The writer a verified token names. */
   def person(subject: String, issuer: String): String = s"person:$subject@$issuer"

@@ -1,0 +1,21 @@
+{
+  "name": "stray",
+  "month": "2026-07",
+  "probability": { "v1": 0.5, "v2": 0.5 },
+  "documents": [
+    {
+      "id": "unregistered",
+      "kind": "a note from nowhere",
+      "source": "nowhere",
+      "locator": "A note with no registered source",
+      "publishedAt": "2026-07-01T09:00:00Z",
+      "text": "This note comes from a source the service does not hold. Its only use is to show that evidence a run records from it is refused as a writer's would be: the source is not held, so the evidence is not held, and no act is written. Nothing in it bears on the launch question.",
+      "expectedReading": {
+        "hypothesis": "launch/yes",
+        "stance": "supports",
+        "statement": "a note from nowhere says nothing about the launch",
+        "weight": { "v1": 0.0, "v2": 0.0 }
+      }
+    }
+  ]
+}

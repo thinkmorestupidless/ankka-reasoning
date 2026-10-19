@@ -1,0 +1,26 @@
+{
+  "id": "launch",
+  "statement": "Will Company X launch Product Y this year?",
+  "hypotheses": [
+    { "id": "yes", "statement": "it launches this year" },
+    { "id": "no", "statement": "it does not launch this year" }
+  ],
+  "sources": [
+    { "id": "company-x-filings", "name": "Company X filings" },
+    { "id": "regulator", "name": "the regulator" },
+    { "id": "trade-press", "name": "the trade press" },
+    { "id": "analyst-notes", "name": "analyst notes" },
+    { "id": "supplier-calls", "name": "supplier earnings calls" },
+    { "id": "rumour-mill", "name": "the rumour mill" }
+  ],
+  "market": {
+    "id": "launch-market",
+    "venue": "Example Exchange",
+    "outcomes": [
+      { "outcome": "YES", "hypothesis": "launch/yes" },
+      { "outcome": "NO", "hypothesis": "launch/no" }
+    ],
+    "resolutionCriteria": "Resolves YES if Company X announces general availability of Product Y this year.",
+    "closesAt": "2026-12-31T00:00:00Z"
+  }
+}

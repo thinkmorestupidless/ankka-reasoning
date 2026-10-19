@@ -26,6 +26,9 @@ object Ids:
 
   def version(blueprint: String, n: Int): String = s"$blueprint@$n"
 
+  /** The writer of every record a run of the blueprint writes. No caller is ever named so. */
+  def blueprintWriter(blueprint: String): String = s"blueprint:$blueprint"
+
   /**
    * A record has one act, whichever run wrote it first: the id is the record's, so a later run that
    * meets the record already held finds its act under the same id and writes none.

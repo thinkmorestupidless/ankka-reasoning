@@ -13,7 +13,7 @@ import reasoning.process.domain.*
  * its run, the run before its ending and its acts, the record and the holder before an act. Every
  * check reads an entity by its id, never a view, so links point backwards on the write side.
  */
-final class ProcessRecorder(client: ComponentClient, clock: Clock, belief: Recorder):
+final class ProcessRecorder(client: ComponentClient, clock: Clock, val belief: Recorder):
 
   def now(): reasoning.belief.domain.Moment = clock.now()
 

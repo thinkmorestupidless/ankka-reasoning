@@ -519,6 +519,82 @@ shown.
 **The release page** attaches `ankka-reasoning-<version>-graph-sink.json` in place of the blueprint;
 `deployDescriptors` renders both descriptors.
 
+**V4. Holds.** `BlueprintCheck` accepts a judge step over `Over.Each` (`Step("critique").judge(q).each("read")`)
+with no problem, at both instruction sets, and its result per item is
+`{"<question id>": {answer, probability}}`, which `critique-verdict` reads. The two instruction
+sets give two digests (`AppraiserSuite`).
+
+**V5. Holds.** `FunctionTool` takes `List[String]` and `Option[String]` parameters, three at most;
+`state_claim` and `revise_belief` take exactly three. A `Refused` thrown inside a handler reaches the
+model as the exception's message only, so a tool wraps it in `ToolRefused`, whose message is the
+refusal as the HTTP API writes it, `{rule, error, names}`; the scripted reader parses that and the
+workers are instructed to answer with its `rule` and `names`.
+
+**V6. Holds, with one trap.** `RunContext.current` names the run, step, blueprint and version in a
+tool; `agents.runs.get(runId)` from inside the handler gives the run with its input, `startedBy`
+and `startedAt`, and `agents.blueprints.version` the blueprint to read the step's worker from.
+The trap: `agents.runs.start` answers a *first* start with the run entity's state from before its
+`Started` event (ankka's `thenReply(_ => currentState)`), so the snapshot has no blueprint, version
+or start time, and holding the run from it built an empty entity id. `RunsEndpoint` starts the run
+and then reads it back; `RunResolver` never trusts a snapshot's `runId`, only the id it asked for.
+Request 19.
+
+**V12. Holds.** `POST /process/runs` with the same body again answers `200` with the run as held;
+ankka answers the run as it stands and calls no tool again. Five pieces of evidence, five claims and
+one belief revision, eleven acts, after the second send as after the first.
+
+**V13. Does not hold as written; `Scripted` serves otherwise.** `Scripted.itemOf` recognises only
+items of the form `"item":"i<n>"`, and a `read` item here is a document object. The scripted model
+reads the JSON after the step's first line (`Scripted.userText`), which carries `input` and `item`
+for a for-each step and `verdict`, `read` and `input` for the reviser; `Scripted.forStep`,
+`afterTool`, `call` and `answer` are used as they are. The tool results a request carries
+(`ChatMessage.ToolResults`) give the ids the tools answered with.
+
+**V9, in full.** Two providers shared by every suite in the JVM, reset before each scenario, are
+enough: `ToolsFeatures` runs fourteen scenarios, each installing the appraiser's script afresh, on
+the fixture every other suite shares.
+
+**F-h. A sixth step, `close`.** R13's five steps end with the reviser's answer; a reviser that was
+refused answers `{refused}` and the run would end `completed`. The spec's outline has such a run
+refused, naming the rule, and a tool cannot fail a run (R12), so a call step `close` with the
+handler `revision-check` follows `revise`: it fails the run `the reviser was refused: <rule>,
+naming <names>` or passes `{revision}` on. The `revise` step's result shape allows either answer.
+Request 16 would remove it.
+
+**F-i. The reader's answer carries what the critique judges.** R13 has the judgment given the
+claim's statement and stances and the evidence's excerpt, but a `read` item of `{document,
+evidence, claim}` holds only ids. The reader answers `{document, evidence, claim, excerpt,
+statement, stances}` (the first required, the rest optional in the shape), so the judgment reads
+them from the item without a read of the service.
+
+**F-j. `belief.rests-on.other-holder` is this layer's rule.** The refusals contract lists it among
+spec 001's; the belief layer has `belief.rests-on.other-question` and no rule on the holder, since a
+writer may rest on anyone's claim. A run's revision rests only on claims its holder stated, so
+`revise_belief` refuses it (422) before the belief layer is asked. *A stance on a hypothesis of
+another question* is bound to a question that is not held (`claim.stance.hypothesis-not-held`): a
+stance on another held question's hypothesis is what the critique judges (FR-010's second check),
+and the belief layer accepts it as it accepts any writer's.
+
+**F-k. The appraiser's holders and the golden set's sources are registered as the registry is
+built,** inside `AgentRuntime.withBlueprints`, where the component client is to hand and before
+any run can start; T034 placed it in `Main`. An id held by another record is left to it. The
+service's tests add a tranche of their own, `stray.json`, whose one document comes from a source
+nobody registers, through `REASONING_GOLDEN_SET` pointing at the test resources: a file in that
+directory wins over the one the `process` module carries.
+
+**F-l. Each scenario's evidence is its own.** Evidence is identified by source, locator and excerpt;
+the scripted reader quotes a passage of the document chosen from the scenario's number, so
+scenarios on one shared service do not meet each other's evidence, while two runs of one scenario
+do, as *evidence an earlier run recorded* needs. The number is the test JVM's scenario counter,
+which other suites running beside this one advance, so the passage has to be the number's own over
+thousands of scenarios, not its remainder: the first try, the first *n* mod 40 words, met itself in
+CI and *a run sent twice* found four pieces of evidence where it had written five.
+
+**F-m. The seed suite's sources are repeats.** The launch example's two sources are the golden set's,
+which the service registers as it starts (F-k), so a seed file sent to a fresh service is answered
+`200` for those two and `201` for the rest; the suite expects exactly that. The same is true of
+anyone following *record reasoning* in the docs, which the docs tasks (T057) say.
+
 ## Measurements
 
 *(SC-006: the golden set's four runs, the graph caught up and the four answers, on a laptop;
@@ -539,6 +615,7 @@ by ankka's blueprints and stays as the record of why they were asked for.
     the fault instead of from a handler step after it (R12).
 17. A judgment provider over a text model, or a model provider that judges, so a live suite needs one
     key (R15).
+19. `RunEntity.start` to answer the state after its `Started` event, not before it (V6).
 
 **To ankka, carried over**
 

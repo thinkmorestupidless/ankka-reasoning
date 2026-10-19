@@ -1,5 +1,6 @@
 package reasoning.support
 
+import com.thinkmorestupidless.ankka.agent.AgentRuntime
 import com.thinkmorestupidless.ankka.http.HttpServer
 import com.thinkmorestupidless.ankka.runtime.ProjectionRuntime
 import com.thinkmorestupidless.ankka.testkit.AnkkaTestKit
@@ -199,7 +200,15 @@ object GraphFixture:
   lazy val settings: Settings =
     Settings
       .from(ConfigFactory.load())
-      .copy(graph = Some(connection), stewards = Set(Http.writer(ServiceFixture.Steward)))
+      .copy(
+        graph = Some(connection),
+        stewards = Set(Http.writer(ServiceFixture.Steward)),
+        goldenSet = ServiceFixture.settings.goldenSet
+      )
+
+  /** ankka's agents, hosting the appraiser, over this fixture's clock. */
+  lazy val agents: AgentRuntime =
+    ReasoningService.agents(settings, ServiceFixture.model, ServiceFixture.judge, clock)
 
   private lazy val started: (AnkkaTestKit, HttpServer) =
     createTopic()
@@ -209,15 +218,11 @@ object GraphFixture:
     // answering costs a reader two seconds.
     val reader = Neo4jGraph(connection, answerWithinMs = 2000L)
     val server = HttpServer.at("127.0.0.1", 0)(
-      ReasoningService.endpoints(settings, clock, reader, publishing = true)*
+      ReasoningService.endpoints(settings, clock, reader, publishing = true, agents = Some(agents))*
     )
     val kit = AnkkaTestKit.start(
       ReasoningService.components(settings, publishing = true, clock = clock),
-      Seq(
-        ProjectionRuntime.withKafka(kafka.getBootstrapServers),
-        ReasoningService.agents(settings, ServiceFixture.model, ServiceFixture.judge),
-        server
-      ),
+      Seq(ProjectionRuntime.withKafka(kafka.getBootstrapServers), agents, server),
       readyTimeout = 120.seconds
     )
     sys.addShutdownHook {
