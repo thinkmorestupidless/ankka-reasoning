@@ -30,6 +30,8 @@ abstract class FeatureSuite(feature: String) extends GherkinSuite(feature):
 
   override def beforeEach(context: BeforeEach): Unit =
     clock.set(clockStart)
+    ServiceFixture.model.reset()
+    ServiceFixture.judge.reset()
     w = World(s"${FeatureSuite.tag(feature)}${FeatureSuite.next()}")
 
   // ── Helpers ───────────────────────────────────────────────────────────────

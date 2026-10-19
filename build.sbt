@@ -1,9 +1,9 @@
 // ankka-reasoning: a reasoning graph on ankka.
 //
-// Five modules. `graph` knows neither layer; `belief` names nothing of `market`; `market` builds on
-// `belief`; `service` composes them and is the one deployable; `seed` is a client of the service
-// and depends on none of them. The layering is the dependency direction, so a market word in the
-// belief layer does not compile.
+// Six modules. `graph` knows no layer; `belief` names nothing of `market`; `market` builds on
+// `belief`; `process` builds on `market`; `service` composes them and is the one deployable; `seed`
+// is a client of the service and depends on none of them. The layering is the dependency
+// direction, so a market word in the belief layer, or a process word in either, does not compile.
 
 import Dependencies.*
 
@@ -53,7 +53,7 @@ lazy val common = Seq(
   publish / skip              := true
 )
 
-// The three layers are libraries as well as parts of the service: another ankka application can
+// The four layers are libraries as well as parts of the service: another ankka application can
 // compose the belief layer, or both, into a service of its own. They are what a release publishes
 // to Maven Central. The service is published as an image, and `seed` not at all.
 lazy val published = Seq(publish / skip := false)
@@ -90,6 +90,20 @@ lazy val market = project
   )
   .settings(published)
 
+lazy val process = project
+  .in(file("modules/process"))
+  .dependsOn(market)
+  .settings(common)
+  .settings(
+    name := "ankka-reasoning-process",
+    description := "The process layer of ankka-reasoning: runs of blueprints and the acts they write, built on the market layer.",
+    libraryDependencies ++= Seq(ankkaSdk, ankkaRuntime, ankkaHttp, ankkaAgent, ankkaTestkit % Test),
+    // The golden set is at the repository's root, for the seed client and the pages as well; the
+    // module carries it so a deployed service reads it from the classpath.
+    Compile / unmanagedResourceDirectories += (ThisBuild / baseDirectory).value / "golden-set"
+  )
+  .settings(published)
+
 lazy val seed = project
   .in(file("modules/seed"))
   .settings(common)
@@ -102,7 +116,7 @@ lazy val seed = project
 
 lazy val service = project
   .in(file("modules/service"))
-  .dependsOn(belief, market, seed % Test)
+  .dependsOn(belief, market, process, seed % Test)
   .enablePlugins(JavaAppPackaging, DockerPlugin)
   .settings(common)
   .settings(
@@ -151,7 +165,7 @@ lazy val service = project
 
 lazy val root = project
   .in(file("."))
-  .aggregate(graph, belief, market, service, seed)
+  .aggregate(graph, belief, market, process, service, seed)
   .settings(name := "ankka-reasoning", publish / skip := true)
 
 // The platform's database schema, taken out of the ankka-runtime artifact into target/ddl, where

@@ -96,7 +96,7 @@ Open the one a task needs; each is one topic and stands alone.
 - `references/concepts/records-and-links.md` — The kinds of record ankka-reasoning holds, the links each one states, and the three rules that keep the graph a history that cannot loop or be rewritten.
 - `references/concepts/nothing-is-edited.md` — Why a record is never changed once held, how thinking again is recorded instead, and the one exception, withdrawing text, with what it leaves behind.
 - `references/concepts/two-times.md` — The difference between when a record is dated and when it was recorded, and how asOf and asRecordedBy use each to answer a question about the past.
-- `references/concepts/layers.md` — How the graph's vocabulary is divided into a belief layer and a market layer, what a layer may and may not do, and how the vocabulary is enforced.
+- `references/concepts/layers.md` — How the graph's vocabulary is divided into a belief layer, a market layer and a process layer, what a layer may and may not do, and how the vocabulary is enforced.
 - `references/concepts/writers-and-holders.md` — Who a caller is taken to be, how a writer comes to speak for a holder, what that permits, and what a steward may do that other writers may not.
 
 ### Build

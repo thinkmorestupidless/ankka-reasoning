@@ -104,6 +104,42 @@ A market's price observations are `BeliefRevision` nodes of the holder it speaks
 
 A void resolution has no `outcome` and no `RESOLVES_TO` edge.
 
+## Process layer
+
+The process layer adds the kinds in the two tables here and no holder kind: a run writes as a
+holder of the belief layer's. It records which run of which blueprint version wrote a piece of
+evidence, a claim or a belief revision. Every edge it adds leaves one of its own nodes, so it
+changes nothing in the layers beneath it.
+
+The service hosts ankka's blueprints but carries none, and no route starts a run, so the graph
+holds none of these kinds; see [limitations](limitations.md).
+
+### Nodes
+
+| Label | `id` | Properties, besides `dated` and `recordedAt` | Published by |
+|---|---|---|---|
+| `BlueprintVersion` | `blueprint-version:<blueprint>@<n>` | `blueprint` text, `version` whole number, `digest` text | blueprint version |
+| `Run` | `run:<run>` | `blueprint` text, `version` whole number, `startedBy` text | run |
+| `RunEnding` | `run-ending:<run>` | `status` text, `reason`? text | run ending |
+| `Act` | `act:<56 hex characters>` | `step` text, `worker` text, `recordKind` text | act |
+
+A blueprint version is dated when ankka registered it, a run when it started, a run ending when it
+ended, and an act as the record it names. A run with no `RunEnding` is running. An act's
+`recordKind` is `evidence`, `claim` or `revision`, and a record has at most one act.
+
+### Edges
+
+| Type | From | To | Properties | Published by |
+|---|---|---|---|---|
+| `OF` | `Run` | `BlueprintVersion` | | run |
+| `ENDED` | `RunEnding` | `Run` | | run ending |
+| `IN` | `Act` | `Run` | | act |
+| `WROTE` | `Act` | `Evidence`, `Claim` or `BeliefRevision` | | act |
+| `AS` | `Act` | `Holder` | | act |
+
+`GET /graph/vocabulary` names the three kinds of node `WROTE` may run to as
+`Evidence|Claim|BeliefRevision`.
+
 ## The trace from a belief to its sources
 
 One walk reaches the claims a belief revision rests on, the evidence each derives from, and where

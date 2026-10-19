@@ -37,6 +37,10 @@ final case class NodeKind(
 /**
  * A kind of edge the graph may hold: it runs `from` a node of one label `to` a node of another, and
  * is published by the record its `from` node belongs to.
+ *
+ * @param alsoTo
+ *   the labels besides `to` an edge of this kind may run to, for an edge that points at one of
+ *   several kinds of record
  */
 final case class EdgeKind(
     edgeType: String,
@@ -44,10 +48,14 @@ final case class EdgeKind(
     from: String,
     to: String,
     properties: Vector[Property],
-    publishedBy: String
+    publishedBy: String,
+    alsoTo: Vector[String] = Vector.empty
 ):
   /** The `id` of the edge of this kind between two nodes. */
   def id(from: String, to: String): String = s"$edgeType|$from|$to"
+
+  /** Every label an edge of this kind may run to. */
+  def targets: Vector[String] = to +: alsoTo
 
 /** A kind of holder a layer names. */
 final case class HolderKind(name: String, layer: Layer)
@@ -98,7 +106,7 @@ final case class Vocabulary(
         .sorted
     val labels = nodes.map(_.label).toSet
     val dangling = edges.flatMap { e =>
-      Vector(e.from, e.to)
+      (e.from +: e.targets)
         .filterNot(labels)
         .map(l => s"edge '${e.edgeType}' names the label '$l', which no node kind has")
     }

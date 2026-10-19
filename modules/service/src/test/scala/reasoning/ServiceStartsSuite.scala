@@ -6,7 +6,7 @@ import com.thinkmorestupidless.ankka.testkit.AnkkaTestKit
 import com.typesafe.config.ConfigFactory
 import reasoning.belief.application.Clock
 import reasoning.graph.GraphReader
-import reasoning.service.{ReasoningService, Settings}
+import reasoning.service.{Providers, ReasoningService, Settings}
 
 import java.net.URI
 import java.net.http.{HttpClient, HttpRequest, HttpResponse}
@@ -26,7 +26,7 @@ class ServiceStartsSuite extends munit.FunSuite:
     assertEquals(settings.stewards, Set.empty[String])
   }
 
-  test("the service starts and is healthy") {
+  test("the service starts and is healthy with no model key and no judgment key") {
     val settings = Settings.from(ConfigFactory.load())
     val server = HttpServer.at("127.0.0.1", 0)(
       ReasoningService.endpoints(settings, Clock.system, GraphReader.none, publishing = false)*
@@ -34,7 +34,15 @@ class ServiceStartsSuite extends munit.FunSuite:
     val kit =
       AnkkaTestKit.start(
         ReasoningService.components(settings, publishing = false),
-        Seq(ProjectionRuntime(), server)
+        Seq(
+          ProjectionRuntime(),
+          ReasoningService.agents(
+            settings,
+            Providers.model(Map.empty),
+            Providers.judgments(Map.empty)
+          ),
+          server
+        )
       )
     try
       val port = server.boundPort.getOrElse(fail("the server did not bind"))

@@ -13,8 +13,8 @@ not a person's, and are never withdrawn. What reaches the graph is in
 As spec 001's [data-model.md](../001-belief-layer/data-model.md): `id`, `dated`, `recordedAt`,
 `writer`. A record is created once; the same record sent again under its identifier is that record
 (`Same`), a different one is refused. Nothing below is changed after it is held. The writer of a
-process-layer record is the service itself for what it copies from ankka (`service:reasoning` when
-it runs in a cluster, `local` outside one) and `blueprint:<name>` for an act.
+process-layer record is the service itself for what it copies from ankka (`service:reasoning`, a
+writer no caller can be) and `blueprint:<name>` for an act.
 
 ## Process layer
 
@@ -60,7 +60,7 @@ and is not held: a run waiting is a run running.
 
 | Field | Type | Notes |
 |---|---|---|
-| `id` | | `act:` followed by the first 56 hex characters of SHA-256 of `<run id>\n<kind>\n<record id>\n`, so one record in one run has one act id |
+| `id` | | `act:` followed by the first 56 hex characters of SHA-256 of `<kind>\n<record id>\n`, so a record has one act id, whichever run wrote it |
 | `run` | run id | held |
 | `step` | text | the step of the blueprint version, 1 to 200 characters |
 | `worker` | text | the step's worker, 1 to 200 characters (R9) |

@@ -14,6 +14,9 @@ import com.thinkmorestupidless.ankka.http.{Acl, AuthDecision, Caller, Principal}
  * A person arrives through the gateway with a token, verified by `ankka-auth-oidc` against the
  * issuers the service lists in ankka's `ANKKA_AUTH_*` variables, and is `person:<subject>@<issuer
  * name>`. A service that lists no issuer refuses the gateway.
+ *
+ * A blueprint run by this service writes as `blueprint:<name>`. No caller is ever named so: the
+ * form is the service's own, given to the tools a run calls and never derived from a connection.
  */
 object Writers:
 
@@ -25,6 +28,9 @@ object Writers:
     case Caller.Machine(organization, name) => Some(s"machine:$organization/$name")
     case Caller.Local                       => Some("local")
     case Caller.Gateway                     => None
+
+  /** The writer of the records a run of the blueprint `name` writes. */
+  def blueprint(name: String): String = s"blueprint:$name"
 
   /** The writer a verified token names. */
   def person(subject: String, issuer: String): String = s"person:$subject@$issuer"

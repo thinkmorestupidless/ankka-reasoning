@@ -13,6 +13,7 @@ model as the tool's error instead of over HTTP.
 | `run.id.held-by-another` | 409 | the run id is held by a run of a different blueprint or with a different input |
 | `run.input.invalid` | 422 | the input does not fit the blueprint's input shape; `names.field` |
 | `run.not-held` | 422 | a run ending or an act names a run that is not held (the service's own consumers; should not occur) |
+| `run-ending.dated.before-run` | 422 | a run ending is dated before its run (the service's own consumers; should not occur) |
 | `blueprint-version.not-held` | 422 | a run names a version that is not held (should not occur) |
 | `appraiser.instructions.unknown` | 422 | `instructions` is not one the service carries |
 

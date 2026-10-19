@@ -28,7 +28,7 @@ Pinned: ankka 0.12.0, ankka-contrib's sink image `ankka-graph-sink-neo4j:0.1.0`,
 ## Commands
 
 ```bash
-sbt graph/test belief/test market/test          # components alone: seconds
+sbt graph/test belief/test market/test process/test   # components alone: seconds
 sbt 'service/testOnly *QuestionsFeatures'       # one feature's suite; no Docker
 sbt 'service/testOnly *SeededSetSuite'          # a graph suite: starts Kafka, Neo4j and the sink
 sbt test                                        # everything; Docker required

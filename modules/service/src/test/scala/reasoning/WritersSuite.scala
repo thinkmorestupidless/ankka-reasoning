@@ -37,6 +37,17 @@ class WritersSuite extends munit.FunSuite:
     assertEquals(Writers.of(Caller.Gateway), None)
   }
 
+  test("no caller is ever the writer a blueprint's run writes as") {
+    assertEquals(Writers.blueprint("appraiser"), "blueprint:appraiser")
+    val callers = Seq(
+      Caller.Service("blueprint", "appraiser"),
+      Caller.Machine("blueprint", "appraiser"),
+      Caller.Local,
+      Caller.Gateway
+    )
+    callers.flatMap(Writers.of).foreach(writer => assert(!writer.startsWith("blueprint:"), writer))
+  }
+
   test("another service is the writer its certificate names, and two services are two writers") {
     val a = registerAs("writers-a", LocalCallers.header(Caller.Service("shop", "a")))
     val b = registerAs("writers-b", LocalCallers.header(Caller.Service("shop", "b")))

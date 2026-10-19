@@ -487,6 +487,35 @@ no token or a bad one it is refused with `401`; a malformed list stops the servi
 **V10. Holds.** One Postgres container served both the service fixture's kit and the graph
 fixture's in one test JVM: the kit of 0.12.0 shares it. The fixtures stay shared for speed.
 
+**F-c. An act's id is its record's alone,** `act:` and 56 hex of SHA-256 of `<kind>\n<id>\n`, not
+the run's and the record's. R8 has a record keep its first act and a later run gain none for it, and
+that needs the earlier act found when a second run meets evidence already held; with the run in the
+id it could be found only through a view, which the write side does not read. Keyed by the record,
+the act entity itself holds the rule: the same act again is a repeat, another run's act for the
+record is answered with the one held, and anything else under the id is `id.held-by-another`.
+
+**F-d. One kind of edge to several kinds of node.** `WROTE` runs to evidence, a claim or a belief
+revision, and an edge kind named one label to. `EdgeKind` gains `alsoTo`, the labels besides `to`;
+the vocabulary's check and `GET /graph/vocabulary` read every target, the route writing them as
+`Evidence|Claim|BeliefRevision`. No kind of edge of the lower layers changes.
+
+**F-e. The act's property is `recordKind`, not `kind`.** A holder of the belief layer has a `kind`,
+and the vocabulary's own scenario holds that no node beneath the process layer has a property of
+it. The act's says what kind of record it wrote.
+
+**F-f. What the service copies from ankka is written as `service:reasoning`**, in a cluster and on a
+laptop alike. The service's own name in ankka's form for a service, less the project, so no caller
+can be named so (a caller is `service:<project>/<name>`). The data model's `local` outside a cluster
+would have made a copied run look like a laptop writer's.
+
+**F-g. A run ending is not dated before its run** (`run-ending.dated.before-run`, 422), checked by
+the recorder as R6 says. Both dates are ankka's, so it should not occur.
+
+**V9, in part.** One `TestModelProvider` and one `TestJudgmentProvider` are built in
+`ServiceFixture`, handed to both fixtures' agent runtimes, and reset before every scenario. No run
+asks them until the tools exist (Phase 3), so whether a reset between scenarios is enough is not yet
+shown.
+
 **The release page** attaches `ankka-reasoning-<version>-graph-sink.json` in place of the blueprint;
 `deployDescriptors` renders both descriptors.
 

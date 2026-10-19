@@ -212,8 +212,12 @@ object GraphFixture:
       ReasoningService.endpoints(settings, clock, reader, publishing = true)*
     )
     val kit = AnkkaTestKit.start(
-      ReasoningService.components(settings, publishing = true),
-      Seq(ProjectionRuntime.withKafka(kafka.getBootstrapServers), server),
+      ReasoningService.components(settings, publishing = true, clock = clock),
+      Seq(
+        ProjectionRuntime.withKafka(kafka.getBootstrapServers),
+        ReasoningService.agents(settings, ServiceFixture.model, ServiceFixture.judge),
+        server
+      ),
       readyTimeout = 120.seconds
     )
     sys.addShutdownHook {

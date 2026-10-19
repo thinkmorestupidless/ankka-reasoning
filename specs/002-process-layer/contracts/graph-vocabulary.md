@@ -12,7 +12,7 @@ same content is served at `GET /graph/vocabulary` under the layer `process`.
 | `BlueprintVersion` | `blueprint-version:<blueprint>@<n>` | `blueprint`, `version`, `digest` | blueprint version |
 | `Run` | `run:<run id>` | `blueprint`, `version`, `startedBy` | run |
 | `RunEnding` | `run-ending:<run id>` | `status`, `reason`? | run ending |
-| `Act` | `act:<56 hex>` | `step`, `worker`, `kind` (`evidence`, `claim` or `revision`) | act |
+| `Act` | `act:<56 hex>` | `step`, `worker`, `recordKind` (`evidence`, `claim` or `revision`) | act |
 
 `dated` is: when the version was registered; when the run started; when the run ended; the written
 record's `dated`. A run with no `RunEnding` is running.
@@ -24,7 +24,7 @@ record's `dated`. A run with no `RunEnding` is running.
 | `OF` | `Run` | `BlueprintVersion` | | run |
 | `ENDED` | `RunEnding` | `Run` | | run ending |
 | `IN` | `Act` | `Run` | | act |
-| `WROTE` | `Act` | `Evidence`, `Claim` or `BeliefRevision`, exactly one | | act |
+| `WROTE` | `Act` | `Evidence`, `Claim` or `BeliefRevision`, exactly one; served as `Evidence\|Claim\|BeliefRevision` | | act |
 | `AS` | `Act` | `Holder` | | act |
 
 Every edge the layer adds leaves one of its own nodes (the spec's FR-005; the vocabulary scenario

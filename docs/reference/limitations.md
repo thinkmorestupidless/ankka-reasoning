@@ -15,8 +15,10 @@ deliberate. Each entry says how the system behaves today, so a reader can plan r
 
 - **No agent writes to it.** Records arrive from a person, a script or another service over the
   [HTTP API](http-api.md). Nothing in the service gathers evidence, states a claim or forecasts.
-- **No process layer.** The graph holds what was concluded and on what grounds. It does not hold
-  how a record came to be made: no goals, tasks, model calls or sessions.
+- **The process layer is named, and nothing writes it.** The vocabulary names blueprint versions,
+  runs, run endings and acts, and the service hosts ankka's blueprints, but it carries no blueprint
+  and no route starts a run. The graph holds what was concluded and on what grounds, not how a
+  record came to be made: no goals, tasks, model calls or sessions.
 - **No scoring.** Once a market is resolved the service can say what each holder believed at the
   time. It does not say which holders or which evidence were worth listening to.
 - **A belief does not think again by itself.** `GET /answers/resting-on-revised` lists the beliefs
