@@ -96,9 +96,17 @@ abstract class ExplainFeatureSuite(feature: String) extends GraphFeatureSuite(fe
   When(
     "a reader asks why the belief of {string} in {string} changed between its first and second belief revisions"
   ) { (holder: String, hypothesis: String) =>
-    assertEquals(holderId(holder), example.holder)
-    assertEquals(w.hypotheses(hypothesis), example.yes)
-    changeBetween(example.first, example.second)
+    if example != null then
+      assertEquals(holderId(holder), example.holder)
+      assertEquals(w.hypotheses(hypothesis), example.yes)
+      changeBetween(example.first, example.second)
+    else
+      // No example: the holder's own line, as the service holds it.
+      val revisions = held(
+        s"/beliefs/line?holder=${holderId(holder)}&hypothesis=${w.hypotheses(hypothesis)}"
+      )("revisions").arr.sortBy(_("n").num)
+      assert(revisions.size >= 2, s"${revisions.size} belief revisions")
+      changeBetween(revisions(0)("id").str, revisions(1)("id").str)
   }
 
   When("a reader asks why the belief changed between its first and second belief revisions")(() =>

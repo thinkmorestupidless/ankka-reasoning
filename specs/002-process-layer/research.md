@@ -548,10 +548,15 @@ projection delivers it a few seconds later, so a reader who asks the moment the 
 finds no version yet: the suites' catch-up wait asks again for a record not yet held, and a run
 holds its version itself when it comes first (R7).
 
-**V11. Holds, so far as phase 3 saw.** A handler that throws fails the run with its message in
-`reason` and no later step runs: *revises a belief dated before the claim it rests on* fails an
-earlier run's critique and finds its ending `failed` with the reason naming the rule, and no
-revision. The critique-fails scenario of the golden set (T047) is the proof proper.
+**V8. Holds.** The first scenario to register `v2` is answered `201 {blueprint: "appraiser",
+version: 2}`, the holder's earlier runs keep version 1 in their acts, and the second holder's acts
+name 2. Sent again, the same instructions are answered `200` with the version held. Later scenarios
+see higher numbers (F-p).
+
+**V11. Holds.** The critique-fails scenario: the verdict handler throws, the run ends `failed` with
+the reason `verdict: the handler 'critique-verdict' failed: claim <id> does not derive from
+evidence recorded from a document of the tranche`, naming the filing's claim; the five claims stay
+held, each with its act; no revision follows and the holder has no belief in the question.
 
 **V12. Holds.** `POST /process/runs` with the same body again answers `200` with the run as held;
 ankka answers the run as it stands and calls no tool again. Five pieces of evidence, five claims and
@@ -624,10 +629,57 @@ them read the graph. `NoProcessFixture` is a second service in the test JVM, bui
 the one sink; the suites of `features/record/`, `features/explain/` and `features/market/` run
 again against it under their own prefixes.
 
+**F-p. "Blueprint version 1" is the version carrying the first instruction set.** ankka numbers
+every registration that changes the blueprint, a run is always of the current version
+(`RunCalls.start` names none), and one service serves every scenario of a test JVM. Once a scenario
+has registered `v2`, the appraiser carries `v1` again only at a third number, and so on. The
+Background step puts `v1` back when it is not current, through `POST /process/appraiser/versions`,
+and a feature's "blueprint version n" is read as the latest version carrying `v<n>`
+(`ProcessFeatureSuite.versionAt`). The first scenario to register `v2` sees the literal 1 and 2.
+
+**F-q. The case for the hypothesis holds both tranches' supporting claims.** The case (spec 001,
+`GLOSSARY.md`) is every claim that supports the hypothesis and is not revised. The May tranche has
+two supporting documents, the trade-press piece and the supplier's call, and the appraiser states
+claims from them; after the second run the case holds four claims, two from each tranche, and *the
+case for the hypothesis after the second run walks back to the June tranche only* could not hold.
+The scenario is now *…holds the supporting claims of both tranches, each with the run that wrote
+it*; spec US3 and FR-012 say the same. What walks back to June alone is what the current belief
+revision rests on, which *the appraiser run over the June tranche revises the belief…* checks.
+
+**F-r. The two holders rest on claims of their own.** FR-011 says a second holder's run rests on
+claims of its own, F-j refuses a run's revision that rests on another holder's claim, and the
+comparison pairs claims by id (spec 001). So `both` is empty and each side's claims are one
+holder's, though every one of them derives from the same evidence, which is shared between runs
+(F-l). *The two holders rest on the same claims with different weights* is now *…rest on claims of
+their own from the same evidence, with different weights*, pairing the two sides by the evidence
+their claims derive from; spec US3 and FR-012 say the same. A comparison that pairs claims by
+their evidence would be a belief-layer answer, and is not asked for here.
+
+**F-s. A tranche is read on the last day of its month.** R19 said a day in May and a day in June.
+The June rumour is published on 20 June at 22:00, and evidence observed before it was published
+is refused (`evidence.observed-before-published`), so a June run dated 20 June at 09:00 failed its
+critique. The suites date the May run 31 May and the June run 30 June; the market resolved
+afterwards is dated 14 November, and the clock moves there first (`dated.later-than-now`).
+
+**F-t. A second holder's run writes no evidence act.** Evidence is identified by its content, so
+the second holder's run finds the first holder's evidence held and that evidence keeps the earlier
+run's act (*the act of the evidence names the earlier run*). Its acts are the five claims and the
+revision; the suite's expected counts say so. A resolution reaches the graph with its market,
+whose version moves, so the wait for it is a wait on the market.
+
+**F-u. The scripted judgment's standing answer wins.** `TestJudgmentProvider` looks a standing
+answer up before the queue, so a no queued after `always(yes)` never reaches the critique.
+`ScriptedAppraiser.judgeNo()` resets the provider and makes no the standing answer; the verdict
+then fails on the first item, the filing's, whose claim `withClaimFrom(evidence, "filing")` made
+derive from evidence a writer recorded from no document. T047's `judgeNo(<that claim>)` is that.
+
 ## Measurements
 
-*(SC-006: the golden set's four runs, the graph caught up and the four answers, on a laptop;
-SC-007: ten live runs; SC-009: time to the graph of a record a run writes, with its act)*
+| Criterion | What was timed | Measured | Where | Verdict |
+|---|---|---|---|---|
+| SC-006 | the golden set's four runs, the graph caught up and an answer (*the two holders…*, *the market resolved afterwards…*) | 6 s a scenario; the four runs alone 4.2 s; the eleven scenarios of `GoldenSetFeatures` 50 s | 2026-10-19, an Apple silicon laptop, the scripted model, the sink under amd64 emulation | well under the two minutes asked |
+
+*(SC-007: ten live runs; SC-009: time to the graph of a record a run writes, with its act: Phase 7)*
 
 ## Requests
 
