@@ -18,6 +18,8 @@ each with an environment variable that overrides it. Changing a setting is a res
 | `REASONING_EXCERPT_LIMIT` | `reasoning.excerpt-limit` | `2000` | service |
 | `REASONING_WAIT_LIMIT_MAX_MS` | `reasoning.wait-limit-max-ms` | `30000` | service |
 | `REASONING_STEWARDS` | `reasoning.stewards` | `""` | service |
+| `REASONING_APPRAISER_HOLDERS` | `reasoning.appraiser-holders` | `"appraiser-a,appraiser-b"` | service |
+| `REASONING_GOLDEN_SET` | `reasoning.golden-set` | `""` | service |
 
 Settings with no environment variable, overridable in the service's own `application.conf`:
 
@@ -41,6 +43,14 @@ milliseconds. A request for longer waits this long.
 `REASONING_STEWARDS` lists the writers who may withdraw the text of any record, as whole writer
 strings separated by commas, for example `service:compliance/steward`. It is empty by default, so no
 writer is a steward.
+
+`REASONING_APPRAISER_HOLDERS` lists the holders the appraiser may run for, as holder identifiers
+separated by commas. The service registers each as it starts, of the kind `agent`, spoken for by the
+writer `blueprint:appraiser`; a run for a holder not listed is refused.
+
+`REASONING_GOLDEN_SET` is a directory of golden set files: `question.json` and a file per tranche. A
+file there wins over the one of the same name the service carries; with no directory set, the
+service reads the golden set it carries. The service registers the question's sources as it starts.
 
 ## Settings that are ankka's
 

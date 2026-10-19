@@ -1,24 +1,35 @@
 package reasoning
 
 import com.thinkmorestupidless.ankka.http.{Caller, LocalCallers}
+import reasoning.process.appraiser.GoldenSet
 import reasoning.seed.Seed
 import reasoning.support.ServiceFixture
 
 import java.nio.file.Paths
 import scala.concurrent.duration.DurationInt
 
-/** The launch example as a seed file: sent once it is recorded, sent again it changes nothing. */
+/**
+ * The launch example as a seed file: sent once it is recorded, sent again it changes nothing. Its
+ * sources are the golden set's, which the service registers as it starts, so those two are repeats
+ * even the first time.
+ */
 class SeedSuite extends munit.FunSuite:
 
   override val munitTimeout = 5.minutes
 
   private val file    = Paths.get("seed/launch-example.json")
   private val headers = Map(LocalCallers.header(Caller.Service("test", "seed")))
+  private val sources =
+    GoldenSet(ServiceFixture.settings.goldenSet).question.sources.map(_.id).toSet
 
   test("the launch example is recorded, and sent twice it is recorded once") {
     val first = Seed.run(file, ServiceFixture.baseUrl, headers)
     assertEquals(first.size, 10)
-    first.foreach(s => assertEquals(s.status, 201, s"${s.path}: ${s.body}"))
+    first.foreach { s =>
+      val registeredAtStart = s.path == "/sources" && sources(ujson.read(s.body)("id").str)
+      val expected          = if registeredAtStart then 200 else 201
+      assertEquals(s.status, expected, s"${s.path}: ${s.body}")
+    }
 
     val second = Seed.run(file, ServiceFixture.baseUrl, headers)
     assertEquals(second.size, 10)

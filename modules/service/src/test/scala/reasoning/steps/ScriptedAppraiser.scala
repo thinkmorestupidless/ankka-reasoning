@@ -24,8 +24,12 @@ final class ScriptedAppraiser(
     goldenSet: GoldenSet
 ):
 
-  /** How many of the document's words the excerpt is: a scenario's own, so its evidence is. */
-  var excerptWords: Int = 12
+  /**
+   * Which passage of a document the reader quotes: the scenario's own, so that its evidence is. Two
+   * scenarios quote the same passage only when their numbers are thousands apart, far more
+   * scenarios than a test JVM runs.
+   */
+  var scenario: Int = 0
 
   var instructions: String = Instructions.V1
 
@@ -41,7 +45,11 @@ final class ScriptedAppraiser(
   var probability: Option[Double] = None
 
   def excerpt(document: Document): String =
-    document.text.split("\\s+").take(excerptWords).mkString(" ")
+    val words  = document.text.split("\\s+")
+    val starts = (words.length - 12).max(1)
+    val from   = scenario                 % starts
+    val length = 12 + (scenario / starts) % 30
+    words.slice(from, from + length).mkString(" ")
 
   def statement(document: Document): String = document.expectedReading.statement
 

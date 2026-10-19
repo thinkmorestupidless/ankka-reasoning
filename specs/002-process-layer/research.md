@@ -583,9 +583,17 @@ nobody registers, through `REASONING_GOLDEN_SET` pointing at the test resources:
 directory wins over the one the `process` module carries.
 
 **F-l. Each scenario's evidence is its own.** Evidence is identified by source, locator and excerpt;
-the scripted reader quotes the document's first *n* words with *n* from the scenario's number, so
+the scripted reader quotes a passage of the document chosen from the scenario's number, so
 scenarios on one shared service do not meet each other's evidence, while two runs of one scenario
-do, as *evidence an earlier run recorded* needs.
+do, as *evidence an earlier run recorded* needs. The number is the test JVM's scenario counter,
+which other suites running beside this one advance, so the passage has to be the number's own over
+thousands of scenarios, not its remainder: the first try, the first *n* mod 40 words, met itself in
+CI and *a run sent twice* found four pieces of evidence where it had written five.
+
+**F-m. The seed suite's sources are repeats.** The launch example's two sources are the golden set's,
+which the service registers as it starts (F-k), so a seed file sent to a fresh service is answered
+`200` for those two and `201` for the rest; the suite expects exactly that. The same is true of
+anyone following *record reasoning* in the docs, which the docs tasks (T057) say.
 
 ## Measurements
 

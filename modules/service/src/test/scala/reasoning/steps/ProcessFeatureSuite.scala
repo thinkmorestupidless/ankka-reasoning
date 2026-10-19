@@ -40,8 +40,7 @@ abstract class ProcessFeatureSuite(feature: String, graph: Boolean = false)
   override def beforeEach(context: BeforeEach): Unit =
     super.beforeEach(context)
     script = ScriptedAppraiser(ServiceFixture.model, ServiceFixture.judge, goldenSet)
-    script.excerptWords =
-      10 + w.p.reverse.takeWhile(_.isDigit).reverse.toIntOption.getOrElse(0) % 40
+    script.scenario = w.p.reverse.takeWhile(_.isDigit).reverse.toIntOption.getOrElse(0)
 
   // ── Runs ──────────────────────────────────────────────────────────────────
 
