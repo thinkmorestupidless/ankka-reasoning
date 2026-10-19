@@ -24,7 +24,8 @@ Settings with no environment variable, overridable in the service's own `applica
 | Configuration key | Default | Applies in |
 |---|---|---|
 `REASONING_GRAPH_TOPIC` names the delta topic the graph is published to. It has to be the topic the
-pipeline declares, which is `reasoning-graph` in the blueprint shipped with the repository.
+graph sink reads, `ANKKA_GRAPH_SINK_TOPIC` in its descriptor, which is `reasoning-graph` in the
+descriptors shipped with the repository.
 
 `REASONING_NEO4J_URI` is the Bolt address of the graph database the answers read, and
 `REASONING_NEO4J_USERNAME` and `REASONING_NEO4J_PASSWORD` its credentials, which in a deployment come
@@ -51,6 +52,26 @@ The service is an ankka service, and these are read by ankka's runtime. ankka's 
 | `ANKKA_KAFKA_BOOTSTRAP_SERVERS` | the broker the graph is published to; with none set the service holds and returns records and publishes nothing |
 | `ANKKA_DB_HOST`, `ANKKA_DB_PORT`, `ANKKA_DB_NAME`, `ANKKA_DB_USER`, `ANKKA_DB_PASSWORD` | the service's Postgres database; set by the platform in a deployment |
 | `ANKKA_HTTP_PORT` | the port the service listens on, `9000` by default; set by the platform in a deployment |
+| `ANKKA_AUTH_ISSUERS`, and for each name it lists `ANKKA_AUTH_<NAME>_ISSUER`, `_JWKS_URL`, `_AUDIENCE`, and optionally `_CA`, `_TYP`, `_CLOCK_SKEW` | the issuers whose tokens name a person through the gateway; with none listed, every caller through the gateway is refused |
+
+`ANKKA_AUTH_ISSUERS` is a comma-separated list of names, each the service's own word for one identity
+provider, such as `ANKKA_AUTH_ISSUERS=staff`. For each, `ANKKA_AUTH_STAFF_ISSUER` is what a token's
+`iss` must equal, `ANKKA_AUTH_STAFF_JWKS_URL` where the provider publishes its keys and
+`ANKKA_AUTH_STAFF_AUDIENCE` the audience a token must name. A person whose token one of them signed is
+the writer `person:<subject>@staff`. A list with a mistake in it stops the service from starting, with
+every problem named. ankka's [A service's own users](https://docs.ankka.cloud/platform/identity/#a-services-own-users)
+describes the verifier.
+
+## The graph sink's settings
+
+The graph sink is a service of its own, ankka-contrib's image, and reads its settings from its
+descriptor, `deploy/graph-sink.json`:
+
+| Variable | What it means |
+|---|---|
+| `ANKKA_GRAPH_SINK_TOPIC` | the delta topic it reads, `reasoning-graph` |
+| `ANKKA_GRAPH_SINK_VERSION` | `1` to start; raised by one to read the topic again from its start into an emptied database |
+| `NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`, `NEO4J_DATABASE` | the graph database it writes to; the credentials from the project secret `reasoning-graph` |
 
 ## One setting fixed in the service
 

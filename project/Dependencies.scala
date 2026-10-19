@@ -5,7 +5,7 @@ object Dependencies {
 
   object V {
     val scala          = "3.9.0"
-    val ankka          = "0.10.0"
+    val ankka          = "0.12.0"
     val neo4jDriver    = "5.28.5"
     val kafkaClients   = "3.9.2"
     val ujson          = "4.4.3"
@@ -16,7 +16,7 @@ object Dependencies {
     // Images the tests and the compose file run. A test never names one by a literal.
     val kafkaImage = "apache/kafka:3.9.1"
     val neo4jImage = "neo4j:5.26-community"
-    val sinkImage  = "ghcr.io/thinkmorestupidless/ankka-flow-sidecar:0.3.0"
+    val sinkImage  = "ghcr.io/thinkmorestupidless/ankka-graph-sink-neo4j:0.1.0"
   }
 
   private def ankka(module: String) = "com.thinkmorestupidless" %% s"ankka-$module" % V.ankka
@@ -25,6 +25,8 @@ object Dependencies {
   val ankkaRuntime         = ankka("runtime")
   val ankkaHttp            = ankka("http")
   val ankkaTestkit         = ankka("testkit")
+  val ankkaAgent           = ankka("agent")
+  val ankkaAuthOidc        = ankka("auth-oidc")
   val ankkaControlPlaneApi = ankka("controlplane-api")
 
   val neo4jDriver = "org.neo4j.driver" % "neo4j-java-driver" % V.neo4jDriver

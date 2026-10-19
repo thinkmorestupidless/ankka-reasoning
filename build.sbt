@@ -1,9 +1,9 @@
 // ankka-reasoning: a reasoning graph on ankka.
 //
-// Five modules. `graph` knows neither layer; `belief` names nothing of `market`; `market` builds on
-// `belief`; `service` composes them and is the one deployable; `seed` is a client of the service
-// and depends on none of them. The layering is the dependency direction, so a market word in the
-// belief layer does not compile.
+// Six modules. `graph` knows no layer; `belief` names nothing of `market`; `market` builds on
+// `belief`; `process` builds on `market`; `service` composes them and is the one deployable; `seed`
+// is a client of the service and depends on none of them. The layering is the dependency
+// direction, so a market word in the belief layer, or a process word in either, does not compile.
 
 import Dependencies.*
 
@@ -53,7 +53,7 @@ lazy val common = Seq(
   publish / skip              := true
 )
 
-// The three layers are libraries as well as parts of the service: another ankka application can
+// The four layers are libraries as well as parts of the service: another ankka application can
 // compose the belief layer, or both, into a service of its own. They are what a release publishes
 // to Maven Central. The service is published as an image, and `seed` not at all.
 lazy val published = Seq(publish / skip := false)
@@ -75,7 +75,7 @@ lazy val belief = project
   .settings(
     name := "ankka-reasoning-belief",
     description := "The belief layer of ankka-reasoning: its records, rules, graph consumers, answers and routes.",
-    libraryDependencies ++= Seq(ankkaSdk, ankkaRuntime, ankkaHttp, ankkaTestkit % Test)
+    libraryDependencies ++= Seq(ankkaSdk, ankkaRuntime, ankkaHttp, ankkaAgent, ankkaTestkit % Test)
   )
   .settings(published)
 
@@ -87,6 +87,20 @@ lazy val market = project
     name        := "ankka-reasoning-market",
     description := "The market layer of ankka-reasoning, built on the belief layer.",
     libraryDependencies ++= Seq(ankkaSdk, ankkaRuntime, ankkaHttp, ankkaTestkit % Test)
+  )
+  .settings(published)
+
+lazy val process = project
+  .in(file("modules/process"))
+  .dependsOn(market)
+  .settings(common)
+  .settings(
+    name := "ankka-reasoning-process",
+    description := "The process layer of ankka-reasoning: runs of blueprints and the acts they write, built on the market layer.",
+    libraryDependencies ++= Seq(ankkaSdk, ankkaRuntime, ankkaHttp, ankkaAgent, ankkaTestkit % Test),
+    // The golden set is at the repository's root, for the seed client and the pages as well; the
+    // module carries it so a deployed service reads it from the classpath.
+    Compile / unmanagedResourceDirectories += (ThisBuild / baseDirectory).value / "golden-set"
   )
   .settings(published)
 
@@ -102,7 +116,7 @@ lazy val seed = project
 
 lazy val service = project
   .in(file("modules/service"))
-  .dependsOn(belief, market, seed % Test)
+  .dependsOn(belief, market, process, seed % Test)
   .enablePlugins(JavaAppPackaging, DockerPlugin)
   .settings(common)
   .settings(
@@ -111,6 +125,8 @@ lazy val service = project
       ankkaSdk,
       ankkaRuntime,
       ankkaHttp,
+      ankkaAgent,
+      ankkaAuthOidc,
       ankkaTestkit         % Test,
       ankkaControlPlaneApi % Test,
       ujson                % Test,
@@ -149,7 +165,7 @@ lazy val service = project
 
 lazy val root = project
   .in(file("."))
-  .aggregate(graph, belief, market, service, seed)
+  .aggregate(graph, belief, market, process, service, seed)
   .settings(name := "ankka-reasoning", publish / skip := true)
 
 // The platform's database schema, taken out of the ankka-runtime artifact into target/ddl, where
@@ -173,11 +189,11 @@ schema := {
   out
 }
 
-// deploy/service.json with the image and the ankka version written in, into target/deploy. Where
-// the broker and the graph database are is the cluster's to say: REASONING_DEPLOY_KAFKA and
-// REASONING_DEPLOY_NEO4J_URI, and a placeholder left in is said so. A release attaches the file,
-// with those two left in, to its page.
-lazy val deployDescriptors = taskKey[File]("Renders deploy/service.json into target/deploy")
+// deploy/service.json and deploy/graph-sink.json with the images and the ankka version written in,
+// into target/deploy. Where the broker and the graph database are is the cluster's to say:
+// REASONING_DEPLOY_KAFKA and REASONING_DEPLOY_NEO4J_URI, and a placeholder left in is said so. A
+// release attaches both files, with those two left in, to its page.
+lazy val deployDescriptors = taskKey[File]("Renders deploy/*.json into target/deploy")
 deployDescriptors := {
   val log = streams.value.log
   val out = (ThisBuild / baseDirectory).value / "target" / "deploy"
@@ -186,17 +202,21 @@ deployDescriptors := {
   IO.createDirectory(out)
   val places = Seq(
     "${IMAGE}"         -> Some(image),
+    "${SINK_IMAGE}"    -> Some(V.sinkImage),
     "${ANKKA_VERSION}" -> Some(V.ankka),
     "${KAFKA}"         -> sys.env.get("REASONING_DEPLOY_KAFKA"),
     "${NEO4J_URI}"     -> sys.env.get("REASONING_DEPLOY_NEO4J_URI")
   )
-  val rendered =
-    places.foldLeft(IO.read((ThisBuild / baseDirectory).value / "deploy" / "service.json")) {
-      case (text, (place, Some(value))) => text.replace(place, value)
-      case (text, (place, None)) =>
-        log.warn(s"deployDescriptors: $place is not set and is left in target/deploy/service.json")
-        text
-    }
-  IO.write(out / "service.json", rendered)
+  Seq("service.json", "graph-sink.json").foreach { name =>
+    val rendered =
+      places.foldLeft(IO.read((ThisBuild / baseDirectory).value / "deploy" / name)) {
+        case (text, (place, Some(value))) => text.replace(place, value)
+        case (text, (place, None)) if text.contains(place) =>
+          log.warn(s"deployDescriptors: $place is not set and is left in target/deploy/$name")
+          text
+        case (text, _) => text
+      }
+    IO.write(out / name, rendered)
+  }
   out
 }

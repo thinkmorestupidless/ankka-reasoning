@@ -1,8 +1,8 @@
 ---
 title: Layers and the vocabulary
-description: How the graph's vocabulary is divided into a belief layer and a market layer, what a layer may and may not do, and how the vocabulary is enforced.
+description: How the graph's vocabulary is divided into a belief layer, a market layer and a process layer, what a layer may and may not do, and how the vocabulary is enforced.
 kind: concept
-layers: [belief, market]
+layers: [belief, market, process]
 related: [concepts/records-and-links.md, reference/graph-vocabulary.md, build/read-the-graph.md]
 ---
 
@@ -10,7 +10,9 @@ related: [concepts/records-and-links.md, reference/graph-vocabulary.md, build/re
 
 The vocabulary is the complete list of what may be in the graph: every kind of node, every kind of
 edge, the properties of each, and the kinds of holder. It is divided into layers, and each layer can
-be used without the ones above it. There are two: the belief layer, and the market layer on top of it.
+be used without the ones above it. There are three: the belief layer, the market layer on top of it,
+and the process layer on top of that, which records which run of a blueprint wrote a record. The
+process layer's kinds are in the [graph vocabulary](../reference/graph-vocabulary.md#process-layer).
 
 ## What each layer is for
 
@@ -83,7 +85,7 @@ page of JSON can write any query against the graph without reading the service's
 ## The layers as libraries
 
 Each layer is a library as well as a part of the service, so another ankka application can host the
-belief layer, or both, beside components of its own. A release publishes three modules to Maven
+belief layer, or more, beside components of its own. A release publishes four modules to Maven
 Central under `com.thinkmorestupidless`:
 
 | Module | Holds |
@@ -91,12 +93,13 @@ Central under `com.thinkmorestupidless`:
 | `ankka-reasoning-graph` | the vocabulary as a value, the only way to build an element, and the reader of the graph database |
 | `ankka-reasoning-belief` | the belief layer: `BeliefLayer.components`, `BeliefLayer.graphComponents(topic)` and `BeliefLayer.endpoints(clock, config, graph, acl)` |
 | `ankka-reasoning-market` | the market layer, the same three entry points on `MarketLayer` |
+| `ankka-reasoning-process` | the process layer, on `ProcessLayer`; its components need ankka's agent runtime registered beside them |
 
 ```scala
 libraryDependencies += "com.thinkmorestupidless" %% "ankka-reasoning-belief" % "<version>"
 ```
 
-Each depends on the one before it, so naming the market layer brings all three. The service is the
+Each depends on the one before it, so naming the process layer brings all four. The service is the
 example of composing them:
 [`ReasoningService`](https://github.com/thinkmorestupidless/ankka-reasoning/blob/main/modules/service/src/main/scala/reasoning/service/Main.scala)
 adds the two layers' components and endpoints together and nothing else. Two things are the

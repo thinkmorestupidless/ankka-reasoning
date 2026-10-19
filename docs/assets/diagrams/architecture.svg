@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" role="img" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" aria-labelledby="title desc">
   <title id="title">How ankka-reasoning works</title>
-  <desc id="desc">Writers, a person, a script or a test and later agents, send records to the ankka-reasoning service, which runs in an ankka project. Inside the service, Records holds one entity per record, never edited, and checks every rule against the service's own records; every record is kept in the service's Postgres database. Each change goes to the graph consumers, one per kind of record, which turn each record into a node and each link it stated into an edge and publish them as graph deltas to a compacted delta topic in Kafka under the contract ankka.graph-delta.v1. An ankka-flow pipeline that is the built-in Neo4j merge sink alone reads the topic and merges each delta into the graph database, Neo4j, which is a copy that can be emptied and rebuilt from the topic alone. Readers ask the service's Answers, which query the graph database, read only, and reply with records only. A write never waits for the graph.</desc>
+  <desc id="desc">Writers, a person, a script or a test and later agents, send records to the ankka-reasoning service, which runs in an ankka project. Inside the service, Records holds one entity per record, never edited, and checks every rule against the service's own records; every record is kept in the service's Postgres database. Each change goes to the graph consumers, one per kind of record, which turn each record into a node and each link it stated into an edge and publish them as graph deltas to a compacted delta topic in Kafka under the contract ankka.graph-delta.v1. The graph sink, a second service in the same project that runs ankka's graph sink over ankka-contrib's Neo4j store, reads the topic and merges each delta into the graph database, Neo4j, which is a copy that can be emptied and rebuilt from the topic alone. Readers ask the service's Answers, which query the graph database, read only, and reply with records only. A write never waits for the graph.</desc>
   <style>
     .bg { fill: #ffffff; }
     .ink { fill: #1f2328; }
@@ -106,12 +106,12 @@
   <line class="line" x1="668" y1="310" x2="758" y2="310" marker-end="url(#a)"/>
   <text class="small ink" x="722" y="302" text-anchor="middle">deltas</text>
 
-  <!-- ankka-flow -->
+  <!-- The graph sink -->
   <rect class="ns" x="980" y="224" width="196" height="172" rx="10"/>
-  <text class="small muted" x="992" y="242">an ankka-flow pipeline</text>
+  <text class="small muted" x="992" y="242">a service of the project</text>
   <rect class="box" x="994" y="264" width="168" height="92" rx="8"/>
-  <text class="title ink" x="1078" y="290" text-anchor="middle">Neo4j merge sink</text>
-  <text class="small muted" x="1078" y="310" text-anchor="middle">built into ankka-flow</text>
+  <text class="title ink" x="1078" y="290" text-anchor="middle">Graph sink</text>
+  <text class="small muted" x="1078" y="310" text-anchor="middle">ankka's, into Neo4j</text>
   <text class="small muted" x="1078" y="327" text-anchor="middle">applies a delta only when</text>
   <text class="small muted" x="1078" y="343" text-anchor="middle">its version is newer</text>
   <line class="line" x1="932" y1="310" x2="992" y2="310" marker-end="url(#a)"/>

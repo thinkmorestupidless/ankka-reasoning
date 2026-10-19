@@ -1,0 +1,16 @@
+{
+  "name": "reasoning-graph-sink",
+  "service": {
+    "image": "${SINK_IMAGE}",
+    "http": false,
+    "database": "none",
+    "env": [
+      { "name": "ANKKA_GRAPH_SINK_TOPIC", "value": "reasoning-graph" },
+      { "name": "ANKKA_GRAPH_SINK_VERSION", "value": "1" },
+      { "name": "NEO4J_URI", "value": "${NEO4J_URI}" },
+      { "name": "NEO4J_USERNAME", "secretKeyRef": { "name": "reasoning-graph", "key": "username" } },
+      { "name": "NEO4J_PASSWORD", "secretKeyRef": { "name": "reasoning-graph", "key": "password" } },
+      { "name": "NEO4J_DATABASE", "value": "neo4j" }
+    ]
+  }
+}

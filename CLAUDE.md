@@ -5,8 +5,8 @@ Guidance for Claude Code (claude.ai/code) working in this repository.
 ## What this is
 
 `ankka-reasoning` is a reasoning graph built as an ankka application: a record of evidence,
-claims, hypotheses and beliefs, each an ankka entity, published as graph deltas for ankka-flow's
-merge sink to keep in a graph database. The first feature, the belief layer with the market layer
+claims, hypotheses and beliefs, each an ankka entity, published as graph deltas for ankka's graph
+sink to keep in a graph database. The first feature, the belief layer with the market layer
 on it, is built: five sbt modules, one deployable service, and a suite for every scenario.
 
 Start with `specs/001-belief-layer/spec.md` and `plan.md`, then `features/` and `GLOSSARY.md`.
@@ -22,13 +22,13 @@ libraries (`ankka-reasoning-graph`, `-belief`, `-market`); `service` is publishe
 market word in `belief` does not compile. `service` composes the layers and holds every suite that
 needs the whole service. `seed` is a client over HTTP and depends on none of them.
 
-Pinned: ankka 0.10.0, ankka-flow 0.3.0 (the sink's image), Scala 3.9.0, in
+Pinned: ankka 0.12.0, ankka-contrib's sink image `ankka-graph-sink-neo4j:0.1.0`, Scala 3.9.0, in
 `project/Dependencies.scala`.
 
 ## Commands
 
 ```bash
-sbt graph/test belief/test market/test          # components alone: seconds
+sbt graph/test belief/test market/test process/test   # components alone: seconds
 sbt 'service/testOnly *QuestionsFeatures'       # one feature's suite; no Docker
 sbt 'service/testOnly *SeededSetSuite'          # a graph suite: starts Kafka, Neo4j and the sink
 sbt test                                        # everything; Docker required
@@ -44,8 +44,8 @@ just docs-sync                                  # refresh the generated table an
 ```
 
 Use `sbt --client` for repeated commands. The suites that start containers run one at a time
-(`Tags.limit(Tags.Test, 1)`); leave it so. A graph suite needs the sink's image under the name in
-`Dependencies.scala`, which today has to be built from ankka-flow's `v0.3.0` tag (research F8). A
+(`Tags.limit(Tags.Test, 1)`); leave it so. A graph suite pulls the sink's image named in
+`Dependencies.scala`; it is `linux/amd64` only and runs under emulation on Apple silicon. A
 test switch passed to sbt reaches the test JVM only if `build.sbt` forwards it.
 
 One service fixture is shared by every suite in a test JVM, and so is one graph. A suite keeps out
@@ -84,7 +84,7 @@ hand. `docs/contributing/releasing.md` has the checks and the secrets.
 | Links point backwards | A record links only to records already held and dated no later than itself. Cycles cannot be made, so nothing checks for them. |
 | The belief layer names nothing above it | No market, and later no process, word in the belief layer. A layer adds kinds and edges from its own nodes and changes nothing beneath it. |
 | Answers are records | An explanation is made of held records and links. No text is generated. |
-| Missing platform features are requests | What ankka or ankka-flow cannot do is written down as a request to them. Where a feature cannot wait, the way round is named in its plan's Complexity Tracking beside the request that would remove it, and never reaches into the platform's tables or internals. |
+| Missing platform features are requests | What ankka, ankka-flow or ankka-contrib cannot do is written down as a request to them. Where a feature cannot wait, the way round is named in its plan's Complexity Tracking beside the request that would remove it, and never reaches into the platform's tables or internals. |
 
 ## Specs and living features
 

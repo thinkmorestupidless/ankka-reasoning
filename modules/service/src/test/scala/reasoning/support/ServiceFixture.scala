@@ -1,5 +1,7 @@
 package reasoning.support
 
+import com.thinkmorestupidless.ankka.agent.TestModelProvider
+import com.thinkmorestupidless.ankka.agent.judgment.TestJudgmentProvider
 import com.thinkmorestupidless.ankka.http.HttpServer
 import com.thinkmorestupidless.ankka.runtime.{InMemoryBroker, ProjectionRuntime}
 import com.thinkmorestupidless.ankka.testkit.AnkkaTestKit
@@ -27,17 +29,31 @@ object ServiceFixture:
   val Steward = "steward"
 
   val settings: Settings =
-    Settings.from(ConfigFactory.load()).copy(stewards = Set(Http.writer(Steward)))
+    Settings
+      .from(ConfigFactory.load())
+      .copy(stewards = Set(Http.writer(Steward)), people = Some(People.verifier))
 
   val broker: InMemoryBroker = InMemoryBroker()
+
+  /**
+   * The text model and the judgment every run in this JVM asks, the graph fixture's runs too. A
+   * scenario scripts them; `FeatureSuite` resets both before each, so no script outlives its
+   * scenario.
+   */
+  val model: TestModelProvider    = TestModelProvider()
+  val judge: TestJudgmentProvider = TestJudgmentProvider()
 
   private lazy val started: (AnkkaTestKit, HttpServer) =
     val server = HttpServer.at("127.0.0.1", 0)(
       ReasoningService.endpoints(settings, clock, GraphReader.none, publishing = true)*
     )
     val kit = AnkkaTestKit.start(
-      ReasoningService.components(settings, publishing = true),
-      Seq(ProjectionRuntime.withBroker(broker, broker), server),
+      ReasoningService.components(settings, publishing = true, clock = clock),
+      Seq(
+        ProjectionRuntime.withBroker(broker, broker),
+        ReasoningService.agents(settings, model, judge),
+        server
+      ),
       readyTimeout = 120.seconds
     )
     sys.addShutdownHook(kit.stop()): Unit

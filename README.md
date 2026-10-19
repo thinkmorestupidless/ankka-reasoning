@@ -49,7 +49,7 @@ problem unless its reasoning is recorded as it happens.
 ankka-reasoning records the reasoning as it is stated, checks it, and keeps it as a graph that can
 be asked those three questions.
 
-![How ankka-reasoning works. Writers, a person, a script or a test and later agents, send records to the ankka-reasoning service, which runs in an ankka project. Inside the service, Records holds one entity per record, never edited, and checks every rule against the service's own records; every record is kept in the service's Postgres database. Each change goes to the graph consumers, one per kind of record, which turn each record into a node and each link it stated into an edge and publish them as graph deltas to a compacted delta topic in Kafka under the contract ankka.graph-delta.v1. An ankka-flow pipeline that is the built-in Neo4j merge sink alone reads the topic and merges each delta into the graph database, Neo4j, which is a copy that can be emptied and rebuilt from the topic alone. Readers ask the service's Answers, which query the graph database, read only, and reply with records only. A write never waits for the graph.](docs/assets/diagrams/architecture.svg)
+![How ankka-reasoning works. Writers, a person, a script or a test and later agents, send records to the ankka-reasoning service, which runs in an ankka project. Inside the service, Records holds one entity per record, never edited, and checks every rule against the service's own records; every record is kept in the service's Postgres database. Each change goes to the graph consumers, one per kind of record, which turn each record into a node and each link it stated into an edge and publish them as graph deltas to a compacted delta topic in Kafka under the contract ankka.graph-delta.v1. The graph sink, a second service in the same project that runs ankka's graph sink over ankka-contrib's Neo4j store, reads the topic and merges each delta into the graph database, Neo4j, which is a copy that can be emptied and rebuilt from the topic alone. Readers ask the service's Answers, which query the graph database, read only, and reply with records only. A write never waits for the graph.](docs/assets/diagrams/architecture.svg)
 
 It is an ankka application with three parts:
 
@@ -59,9 +59,9 @@ It is an ankka application with three parts:
   revision cannot rest on a claim dated later than itself. Nothing held is changed afterwards.
 - **Graph consumers.** Every record is published as a node, and every link it stated as an edge,
   using ankka's [graph consumers](https://docs.ankka.cloud/build/graph/). The deltas go to a
-  compacted topic, and [ankka-flow](https://github.com/thinkmorestupidless/ankka-flow)'s built-in
-  [merge sink](https://flow.ankka.cloud/reference/neo4j-merge-sink/) applies them to Neo4j. The
-  graph database is a copy: it can be emptied and rebuilt from the topic alone.
+  compacted topic, and ankka's [graph sink](https://docs.ankka.cloud/deploy/graph-sink/), run from
+  [ankka-contrib](https://github.com/thinkmorestupidless/ankka-contrib)'s Neo4j image, applies them
+  to Neo4j. The graph database is a copy: it can be emptied and rebuilt from the topic alone.
 - **Answers.** A reader asks why a belief changed, what the case for a hypothesis is, what was
   believed as of a date, or where two holders differ. Each answer is a walk of the graph and is
   made of records only. No sentence is written for the occasion.
@@ -138,20 +138,19 @@ against 0.61, the claims agent-a rests on, and the market stating no reasons.
 | [`modules/market`](modules/market) | The market layer, built on the belief layer and changing nothing in it. |
 | [`modules/service`](modules/service) | The one deployable: both layers composed, and the suites that run the features. |
 | [`modules/seed`](modules/seed), [`seed/`](seed) | A client of the service: the worked example and a generated set of ten questions as seed files, and the tool that measures. |
-| [`deploy/`](deploy), [`docker-compose.yml`](docker-compose.yml) | The pipeline blueprint and service descriptor for a cluster, and what stands in for a cluster on a laptop. |
+| [`deploy/`](deploy), [`docker-compose.yml`](docker-compose.yml) | The service's and the graph sink's descriptors for a cluster, and what stands in for a cluster on a laptop. |
 | [`docs/`](docs), [`mkdocs.yml`](mkdocs.yml) | The documentation, published at [reasoning.ankka.cloud](https://reasoning.ankka.cloud/) and rendered as an agent skill under [`marketplace/`](marketplace). Built by ankka's docs tool: `just docs`. |
 | [`.github/workflows/release.yml`](.github/workflows/release.yml) | What a `v*` tag publishes: the three layers to Maven Central, the service's image to `ghcr.io/thinkmorestupidless/ankka-reasoning`, the plugin to the ankka marketplace, and a release page. No version has been released yet. |
-| [`notes/ankka-requests.md`](notes/ankka-requests.md) | What this application asks of ankka and ankka-flow, and what each request would remove here. |
+| [`notes/ankka-requests.md`](notes/ankka-requests.md) | What this application asks of ankka and its siblings, and what each request would remove here. |
 | [`CLAUDE.md`](CLAUDE.md) | The working rules for the repository and its commands. |
 
 ## Running it
 
-JDK 21, sbt, Docker and `just`. ankka 0.10.0 comes from Maven Central. The merge sink's image,
-`ghcr.io/thinkmorestupidless/ankka-flow-sidecar:0.3.0`, cannot yet be pulled without a credential:
-until it can, build it from ankka-flow's `v0.3.0` tag and tag it with that name.
+JDK 21, sbt, Docker and `just`. ankka 0.12.0 comes from Maven Central, and the graph sink's image,
+`ghcr.io/thinkmorestupidless/ankka-graph-sink-neo4j:0.1.0`, from `ghcr.io`.
 
 ```bash
-just up                      # Postgres, Kafka with the compacted topic, Neo4j, the merge sink
+just up                      # Postgres, Kafka with the compacted topic, Neo4j, the graph sink
 just run                     # the service on :9000
 just seed launch-example     # the example above, as records
 curl -s localhost:9000/graph/wait -d '{"kind":"revision","id":"agent-a.launch.2"}'
@@ -176,12 +175,13 @@ it is expected:
    revisited.
 4. Scoring: once a market resolves, which holders and which evidence were worth listening to.
 
-## Beside ankka and ankka-flow
+## Beside ankka and ankka-contrib
 
-ankka-reasoning is an application of both and part of neither. ankka supplies the entities, the
-graph consumers and, later, the agents. ankka-flow supplies the delta contract and the merge sink.
-What this project finds missing in either becomes a request to it.
+ankka-reasoning is an application of ankka and part of neither. ankka supplies the entities, the
+graph consumers, the delta contract, the graph sink and, later, the agents. ankka-contrib supplies
+the Neo4j store the sink writes through, as a ready image. What this project finds missing in either
+becomes a request to it.
 
 ## Licence
 
-[Apache 2.0](LICENSE), as ankka and ankka-flow are.
+[Apache 2.0](LICENSE), as ankka and ankka-contrib are.

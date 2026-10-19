@@ -165,7 +165,7 @@ database, rebuild it from the delta topic and compare the two graphs.
 - added `features/graph/publication.feature`: a record is held when the graph database cannot be reached
 - added `features/graph/vocabulary.feature`: the vocabulary names every kind of node and edge with its layer and the one kind of record that publishes it
 - added `features/graph/vocabulary.feature`: nothing is published that the vocabulary does not name
-- added `features/graph/vocabulary.feature`: the belief layer names nothing of the market layer
+- added `features/graph/vocabulary.feature`: the belief layer names nothing of the market layer or the process layer
 - added `features/graph/vocabulary.feature`: a layer adds to the layer beneath it and changes nothing in it
 
 ---

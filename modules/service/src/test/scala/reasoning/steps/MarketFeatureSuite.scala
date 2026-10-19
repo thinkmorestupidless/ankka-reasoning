@@ -451,11 +451,24 @@ abstract class MarketFeatureSuite(feature: String) extends ExplainFeatureSuite(f
   When("a reader reads the vocabulary")(() => ask("/graph/vocabulary"): Unit)
   When("a reader reads the belief layer of the vocabulary")(() => ask("/graph/vocabulary"): Unit)
   When("a reader reads the market layer of the vocabulary")(() => ask("/graph/vocabulary"): Unit)
+  When("a reader reads the process layer of the vocabulary")(() => ask("/graph/vocabulary"): Unit)
+
+  /** Every label, edge type, property and holder kind a layer names. */
+  private def names(of: ujson.Value): Set[String] =
+    (of("nodes").arr.map(_("label").str) ++ of("edges").arr.map(_("type").str) ++
+      of("nodes").arr.flatMap(_("properties").arr.map(_("name").str)) ++
+      of("holderKinds").arr.map(_.str)).toSet
+
+  private def nodeProperties(of: ujson.Value): Set[String] =
+    of("nodes").arr.flatMap(_("properties").arr.map(_("name").str)).toSet
 
   Then(
     "each kind of node and each kind of edge is named with its layer, its properties and the kind of record that publishes it"
   ) { () =>
-    assertEquals(answered("layers").arr.map(_("name").str).toList, List("belief", "market"))
+    assertEquals(
+      answered("layers").arr.map(_("name").str).toList,
+      List("belief", "market", "process")
+    )
     val nodes = answered("layers").arr.flatMap(_("nodes").arr)
     val edges = answered("layers").arr.flatMap(_("edges").arr)
     assertEquals(
@@ -469,10 +482,14 @@ abstract class MarketFeatureSuite(feature: String) extends ExplainFeatureSuite(f
         "Claim",
         "BeliefRevision",
         "Market",
-        "Resolution"
+        "Resolution",
+        "BlueprintVersion",
+        "Run",
+        "RunEnding",
+        "Act"
       )
     )
-    assertEquals(edges.size, 18)
+    assertEquals(edges.size, 23)
     (nodes ++ edges).foreach { kind =>
       assert(kind("publishedBy").str.nonEmpty, kind.toString)
       assert(kind.obj.contains("properties"), kind.toString)
@@ -594,6 +611,37 @@ abstract class MarketFeatureSuite(feature: String) extends ExplainFeatureSuite(f
         e.toString
       )
     )
+  }
+
+  Then("no kind of node, kind of edge or property in it belongs to the process layer") { () =>
+    val beliefNames = names(layer("belief"))
+    assertEquals(beliefNames & names(layer("process")), Set.empty[String])
+    val words = Seq("blueprint", "run", "worker", "step", "digest")
+    beliefNames.foreach(name =>
+      assert(!words.exists(name.toLowerCase.contains), s"the belief layer names '$name'")
+    )
+  }
+
+  Then("every kind of edge in it runs from a node of the process layer") { () =>
+    val process = layer("process")
+    val own     = process("nodes").arr.map(_("label").str).toSet
+    assertEquals(process("edges").arr.size, 5)
+    process("edges").arr.foreach(e =>
+      assert(own.contains(e("from").str), s"${e("type").str} runs from ${e("from").str}")
+    )
+  }
+
+  Then(
+    "no kind of node of the belief layer or the market layer has a property from the process layer"
+  ) { () =>
+    val processProperties = nodeProperties(layer("process"))
+    (layer("belief")("nodes").arr ++ layer("market")("nodes").arr).foreach { node =>
+      assertEquals(
+        node("properties").arr.map(_("name").str).toSet & processProperties,
+        Set.empty[String],
+        node("label").str
+      )
+    }
   }
 
   Then("every kind of edge in it runs from a node of the market layer") { () =>

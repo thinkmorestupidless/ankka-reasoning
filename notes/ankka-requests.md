@@ -1,4 +1,4 @@
-# Requests to ankka and ankka-flow
+# Requests to ankka, ankka-flow and ankka-contrib
 
 What this application would like from the platform it is built on. Each says what is done here
 today and what the request would remove. None blocks the belief layer; the reasons are in
@@ -153,6 +153,9 @@ ankka's `main`.
 **Would remove.** The `401` for the gateway (people would be writers), and
 `FeatureSuite.directoryOf`.
 
+**Answered** by ankka `0.12.0` (2026-10-14): the gateway admits a person with a verified token, and
+each suite is given its one file. Both ways round are gone.
+
 ### 9. ankka-flow's container packages made public (F8)
 
 **Today.** `ghcr.io/thinkmorestupidless/ankka-flow-sidecar:0.3.0` cannot be pulled without a
@@ -162,3 +165,17 @@ credential. The graph suites and the laptop walkthrough run against the same ima
 **Asked.** The sidecar package made public.
 
 **Would remove.** The hand-built image, and the two steps in `.github/workflows/ci.yml`.
+
+**Moot.** The graph is kept by ankka's graph sink with ankka-contrib's public image
+`ankka-graph-sink-neo4j`, and no ankka-flow image is used. The two steps are gone.
+
+## To ankka-contrib
+
+### 18. The graph sink's image for `linux/arm64` as well (spec 002, F-a)
+
+**Today.** `ankka-graph-sink-neo4j:0.1.0` is published for `linux/amd64` only. On Apple silicon Docker
+runs it under emulation: the graph suites and `just up` work, and the sink is slower to start.
+
+**Asked.** A multi-architecture image, `linux/amd64` and `linux/arm64`.
+
+**Would remove.** The emulation, and the platform warning on every start.

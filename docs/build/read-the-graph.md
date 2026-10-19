@@ -25,7 +25,7 @@ them.
 ## The service never writes to the graph
 
 The graph database is for reading. The service publishes each record as graph deltas to a Kafka topic,
-ankka-flow's merge sink applies them to the graph database, and the service connects to the database
+the graph sink applies them to the graph database, and the service connects to the database
 only to read. It creates nothing there, and no rule about whether a record may be held is ever decided
 from the graph. Two things follow for a reader:
 

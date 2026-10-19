@@ -69,4 +69,7 @@ object Replies:
       case ErrorCode.Timeout      => 504
       case ErrorCode.Unavailable  => 503
       case ErrorCode.Internal     => 500
+      // As ankka maps them: neither can come from this service's own components today.
+      case ErrorCode.WorkflowFailed => 424
+      case ErrorCode.NotHome        => 421
     Refusal("command.refused", status, error.message)

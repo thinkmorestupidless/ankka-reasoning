@@ -53,7 +53,13 @@ object VocabularyRead:
           )
         ),
         part.edges.map(e =>
-          EdgeKindRead(e.edgeType, e.from, e.to, properties(e.properties), e.publishedBy)
+          EdgeKindRead(
+            e.edgeType,
+            e.from,
+            e.targets.mkString("|"),
+            properties(e.properties),
+            e.publishedBy
+          )
         ),
         part.holderKinds.map(_.name)
       )

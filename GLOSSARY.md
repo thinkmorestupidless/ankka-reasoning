@@ -95,8 +95,8 @@ Where evidence comes from: a publisher, a registry, a feed.
 
 ### evidence
 Something observed outside the service, recorded with its provenance. It belongs to no
-question.
-Avoid: fact, document
+question. A document is what evidence is recorded from, not evidence.
+Avoid: fact
 
 ### provenance
 What says where evidence came from and when: its source, its locator, its author, the
@@ -279,6 +279,106 @@ Who or what decided a resolution.
 ### void
 Of a resolution: naming no outcome, because the market could not be decided.
 
+## The process layer
+
+### process layer
+The layer of blueprint versions, runs and acts, above the belief layer and beside the
+market layer.
+
+### blueprint
+A description of workers and the steps between them, held as data by the platform,
+which runs it. A blueprint is a writer, and speaks for the holders its workers speak for.
+
+### blueprint version
+One registration of a blueprint, numbered from 1, never changed. A changed blueprint is
+a new blueprint version.
+
+### worker
+An agent a blueprint defines by data, which speaks for one holder.
+
+### step
+One part of a blueprint, done by a worker, a critique or a handler, in a run.
+
+### run
+One carrying out of one blueprint version under a run id, as the platform holds it:
+when it started. Held once; how it ended is its run ending.
+Avoid: execution, job
+
+### run ending
+How a run ended: its run status and when it ended, naming the run. Held once, when the
+run ends; a run with no ending is running.
+
+### run id
+The id a run's caller chooses for it; a run sent twice under one run id is one run.
+
+### run status
+How a run ended: "completed", "failed" or "cancelled". A run with no ending has none;
+it is running.
+
+### act
+The record of one record a run wrote: the run, the step, the worker, the blueprint
+version, the record and the holder it was stated as. Held with the record and never without it.
+Avoid: attribution, authorship
+
+### tool
+What a worker calls to write a record: record evidence, state a claim, revise a
+belief. A tool is called in a run, and writes nothing outside one.
+
+### critique
+The step of a run in which a model judges the run's claims and passes them or fails
+the run, instructed that every claim derives from evidence recorded from a document of the run's
+tranche, whoever recorded it and whenever, and every stance is on a hypothesis of the question.
+Offline the judgment is scripted; in the live suite a real model judges.
+
+### appraiser
+The blueprint this service carries: a reader per document, a critique, and a revision
+of the holder's belief.
+
+### live suite
+The suite that runs the appraiser against a real model. It runs only with a model key,
+and never in the build.
+
+### scripted model
+A model a suite answers for, from the expected readings, so that a run is driven with
+no model key and no network.
+
+### real model
+A model reached with a model key, whose words differ from run to run.
+
+### model key
+What reaching a real model needs; the build has none.
+
+## The golden set
+
+### golden set
+The files the example and the suites share: the launch question, two tranches of
+documents and their expected readings.
+
+### tranche
+The documents a run of the appraiser reads, dated in one month.
+Avoid: batch
+
+### May tranche
+The golden set's first tranche: five documents dated in May, which together put the
+launch in doubt.
+
+### June tranche
+The golden set's second tranche: three documents dated in June, which together make the
+launch likely.
+
+### document
+One made-up text a tranche holds, with a source, a locator, when it was published and
+its expected reading. A document is what evidence is recorded from; it is not evidence.
+Avoid: article, source text
+
+### expected reading
+What a document bears on and how: a hypothesis, a stance and a statement, from which
+the scripted model answers and against which a real model's direction is judged.
+
+### approval document
+The June document saying approval was granted, from which the claim that moves the
+belief derives.
+
 ## The example
 
 ### launch example
@@ -294,7 +394,9 @@ the later claim, both dated "11 May".
 
 ## Everyday words
 
-a, an, the, and, or, of, on, for, to, from, with, in, by, at, as, is, are, was, were, has, have,
+wrote, written, nothing, else, among, whom, calls, called, passed, passes, passing, failed, skipped,
+below, above, network, instructions, ended, documents, tranches, acts, runs, versions, steps,
+workers, direction, move, say, both, each, no, a, an, the, and, or, of, on, for, to, from, with, in, by, at, as, is, are, was, were, has, have,
 had, does, do, not, no, it, its, that, which, who, whose, each, every, any, both, one, two, three,
 other, another, same, different, only, own, when, then, given, between, before, after, later,
 earlier, first, second, third, last, now, today, time, day, year, past, yet, again, once, twice,

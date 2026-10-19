@@ -1,6 +1,6 @@
 ---
 title: Run it on your machine
-description: Start the ankka-reasoning service on a laptop with Postgres, Kafka, the merge sink and Neo4j beside it, and check that a record reaches the graph.
+description: Start the ankka-reasoning service on a laptop with Postgres, Kafka, the graph sink and Neo4j beside it, and check that a record reaches the graph.
 kind: tutorial
 related: [get-started/first-explanation.md, reference/configuration.md, deploy/operate.md]
 ---
@@ -15,21 +15,14 @@ cluster would put beside it running in Docker. It takes a few minutes, most of i
 JDK 21, [sbt](https://www.scala-sbt.org/), Docker and [`just`](https://just.systems/). ankka itself is
 a library dependency and comes from Maven Central; nothing of ankka has to be installed.
 
-One image has to be built by hand. The graph is filled by ankka-flow's merge sink, whose released
-image `ghcr.io/thinkmorestupidless/ankka-flow-sidecar:0.3.0` cannot be pulled without a credential.
-Build it from the tag it was released from and give it that name:
-
-```bash
-git clone --branch v0.3.0 https://github.com/thinkmorestupidless/ankka-flow
-cd ankka-flow
-sbt sidecar/Docker/publishLocal
-docker tag ankka-flow-sidecar:0.3.0 ghcr.io/thinkmorestupidless/ankka-flow-sidecar:0.3.0
-```
+The graph is filled by ankka's graph sink, from ankka-contrib's image
+`ghcr.io/thinkmorestupidless/ankka-graph-sink-neo4j:0.1.0`, which Docker pulls on first use. It is
+built for `linux/amd64`; on Apple silicon Docker runs it under emulation.
 
 ## Start what stands in for a cluster
 
 `just up` writes ankka's database schema where Postgres will load it, then starts four containers:
-Postgres for the service's records, Kafka with the delta topic created compacted, Neo4j, and the merge
+Postgres for the service's records, Kafka with the delta topic created compacted, Neo4j, and the graph
 sink that copies the topic into Neo4j.
 
 ```bash
@@ -47,7 +40,7 @@ just up
 ```
 
 The `topic` container runs once and exits: it creates the topic `reasoning-graph` with
-`cleanup.policy=compact`, as the pipeline's operator does in a cluster. The topic must exist before the
+`cleanup.policy=compact`, as a project declares it in a cluster. The topic must exist before the
 service first publishes, because a topic that came into being on first use would not be compacted, and
 compaction is what lets withdrawn text leave the log.
 
@@ -56,7 +49,7 @@ compaction is what lets withdrawn text leave the log.
 | `postgres` | `localhost:5432` |
 | `kafka` | `localhost:9094` |
 | `neo4j` | `http://localhost:7474`, `bolt://localhost:7687`, user `neo4j`, password `reasoning-local-password` |
-| `sink` | metrics on `localhost:2051` |
+| `sink` | no port; its environment in `docker-compose.yml` names the topic and Neo4j, as its descriptor does in a cluster |
 
 Where port 5432 is already taken, set `REASONING_POSTGRES_PORT` for both `just up` and `just run`:
 

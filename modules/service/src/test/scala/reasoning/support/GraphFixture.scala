@@ -11,12 +11,11 @@ import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.serialization.{ByteArrayDeserializer, ByteArraySerializer}
 import org.testcontainers.containers.{GenericContainer, Neo4jContainer, Network}
 import org.testcontainers.kafka.KafkaContainer
-import org.testcontainers.utility.{DockerImageName, MountableFile}
+import org.testcontainers.utility.DockerImageName
 import reasoning.belief.application.SettableClock
 import reasoning.graph.{GraphConnection, GraphReader, Neo4jGraph}
 import reasoning.service.{ReasoningService, Settings}
 
-import java.nio.file.{Files, Path}
 import java.time.Duration
 import java.util.Properties
 import java.util.concurrent.atomic.AtomicInteger
@@ -25,8 +24,8 @@ import scala.jdk.CollectionConverters.*
 
 /**
  * The service with everything a cluster would put beside it: Kafka with the delta topic created
- * compacted, Neo4j, and ankka-flow's released sidecar running the built-in merge sink. One per test
- * JVM, started the first time a suite asks for it.
+ * compacted, Neo4j, and ankka-contrib's released graph sink into Neo4j. One per test JVM, started
+ * the first time a suite asks for it.
  *
  * The sink is the image that will run and not a stand-in for it, because what matters here is what
  * the sink does: replacing a node's properties whole, placeholders, passing over a stale version.
@@ -53,8 +52,8 @@ object GraphFixture:
     container
 
   // testcontainers' containers are typed by themselves, which Scala needs spelled out.
-  private final class Neo4j(name: DockerImageName)   extends Neo4jContainer[Neo4j](name)
-  private final class Sidecar(name: DockerImageName) extends GenericContainer[Sidecar](name)
+  private final class Neo4j(name: DockerImageName) extends Neo4jContainer[Neo4j](name)
+  private final class Sink(name: DockerImageName)  extends GenericContainer[Sink](name)
 
   lazy val neo4j: Neo4jContainer[?] =
     val container = new Neo4j(image("reasoning.neo4j.image"))
@@ -75,11 +74,11 @@ object GraphFixture:
     properties.put("bootstrap.servers", kafka.getBootstrapServers)
     properties
 
-  /** The delta topic as the pipeline's operator would create it: compacted, three partitions. */
+  /** The delta topic as a project declares it: compacted, three partitions. */
   private def createTopic(): Unit =
     val admin = AdminClient.create(kafkaProperties)
     try
-      // Compacted, as the pipeline's operator creates it, with the clocks of compaction turned
+      // Compacted, as a project declares it, with the clocks of compaction turned
       // down from a day to seconds so that a test can see a superseded record leave the log.
       val topic = new NewTopic(Topic, 3, 1.toShort).configs(
         Map(
@@ -96,57 +95,25 @@ object GraphFixture:
 
   private val groups = AtomicInteger(0)
 
+  /** The sink's version: one higher at every start, so that each start reads the topic afresh. */
+  private val versions = AtomicInteger(0)
+
   @volatile private var sink: Option[GenericContainer[?]] = None
 
-  /** The sink's files, as the operator would render and mount them. */
-  private def sinkFiles(group: String): Path =
-    val directory = Files.createTempDirectory("reasoning-sink")
-    Files.writeString(
-      directory.resolve("streamlet.conf"),
-      s"""flow {
-         |  pipeline  = reasoning-graph
-         |  streamlet = graph
-         |  config    = { secret = "neo4j-test", transaction-timeout = "10s" }
-         |  stage {
-         |    name = "neo4j-merge-sink"
-         |    neo4j { credentials-dir = "/etc/flow/neo4j" }
-         |  }
-         |  inlets {
-         |    in {
-         |      topic             = "$Topic"
-         |      group             = "$group"
-         |      bootstrap.servers = "kafka:19092"
-         |      consumer-config { auto.offset.reset = earliest }
-         |      batch { max-records = 500, max-bytes = 1 MiB }
-         |    }
-         |  }
-         |}
-         |""".stripMargin
-    ): Unit
-    Files.copy(
-      Path.of("compose/flow-graph/descriptor.json"),
-      directory.resolve("descriptor.json")
-    ): Unit
-    Files.writeString(directory.resolve("uri"), "bolt://neo4j:7687"): Unit
-    Files.writeString(directory.resolve("username"), "neo4j"): Unit
-    Files.writeString(directory.resolve("password"), Password): Unit
-    Files.writeString(directory.resolve("database"), "neo4j"): Unit
-    directory
-
-  /** Starts the sink under a consumer group of its own, so it reads the topic from the start. */
+  /**
+   * Starts the sink at a version of its own, so it reads the topic from the start, configured by
+   * its environment as a descriptor would configure it.
+   */
   def startSink(): Unit =
-    val group              = s"reasoning-graph.graph.in.${groups.incrementAndGet()}"
-    val files              = sinkFiles(group)
-    def file(name: String) = MountableFile.forHostPath(files.resolve(name), 0x124) // 0444
-    val container = new Sidecar(image("reasoning.sink.image"))
+    val container = new Sink(image("reasoning.sink.image"))
       .withNetwork(network)
-      .withEnv("FLOW_CONFIG_DIR", "/etc/flow/config")
-      .withCopyFileToContainer(file("streamlet.conf"), "/etc/flow/config/streamlet.conf")
-      .withCopyFileToContainer(file("descriptor.json"), "/etc/flow/config/descriptor.json")
-      .withCopyFileToContainer(file("uri"), "/etc/flow/neo4j/uri")
-      .withCopyFileToContainer(file("username"), "/etc/flow/neo4j/username")
-      .withCopyFileToContainer(file("password"), "/etc/flow/neo4j/password")
-      .withCopyFileToContainer(file("database"), "/etc/flow/neo4j/database")
+      .withEnv("ANKKA_GRAPH_SINK_TOPIC", Topic)
+      .withEnv("ANKKA_GRAPH_SINK_VERSION", versions.incrementAndGet().toString)
+      .withEnv("ANKKA_KAFKA_BOOTSTRAP_SERVERS", "kafka:19092")
+      .withEnv("NEO4J_URI", "neo4j://neo4j:7687")
+      .withEnv("NEO4J_USERNAME", "neo4j")
+      .withEnv("NEO4J_PASSWORD", Password)
+      .withEnv("NEO4J_DATABASE", "neo4j")
     container.start()
     sink = Some(container)
 
@@ -245,8 +212,12 @@ object GraphFixture:
       ReasoningService.endpoints(settings, clock, reader, publishing = true)*
     )
     val kit = AnkkaTestKit.start(
-      ReasoningService.components(settings, publishing = true),
-      Seq(ProjectionRuntime.withKafka(kafka.getBootstrapServers), server),
+      ReasoningService.components(settings, publishing = true, clock = clock),
+      Seq(
+        ProjectionRuntime.withKafka(kafka.getBootstrapServers),
+        ReasoningService.agents(settings, ServiceFixture.model, ServiceFixture.judge),
+        server
+      ),
       readyTimeout = 120.seconds
     )
     sys.addShutdownHook {

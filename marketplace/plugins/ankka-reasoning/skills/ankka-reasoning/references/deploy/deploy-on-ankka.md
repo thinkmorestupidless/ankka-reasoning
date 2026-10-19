@@ -1,108 +1,58 @@
 # Deploy on ankka
 
-> Deploy the pipeline that fills the graph database, then the ankka-reasoning service, to an ankka installation with ankka-flow, Kafka and Neo4j, and know which of these steps is unproven.
+> Deploy the graph sink that fills the graph database, then the ankka-reasoning service, to an ankka installation with Kafka and Neo4j, let people write through the gateway, and know which of these steps is unproven.
 
 Source: https://reasoning.ankka.cloud/deploy/deploy-on-ankka/
-ankka-reasoning deploys as two things: an [ankka-flow](https://flow.ankka.cloud/) pipeline that is the
-Neo4j merge sink alone, and one [ankka](https://docs.ankka.cloud/) service, `reasoning`. The pipeline
-has to exist before the service publishes anything, because it creates the topic the service publishes
-to, compacted.
+ankka-reasoning deploys as two services in one [ankka](https://docs.ankka.cloud/) project: `reasoning`,
+the service, and `reasoning-graph-sink`, ankka's
+[graph sink](https://docs.ankka.cloud/deploy/graph-sink/) from ankka-contrib's image
+`ghcr.io/thinkmorestupidless/ankka-graph-sink-neo4j`, which reads the delta topic into Neo4j. The
+topic is declared on the project, compacted, before anything publishes to it.
 
-The order on this page is the one that works: the project, then the service, then the pipeline, then
-the secrets. The service goes before the pipeline because ankka creates a project's namespace when the
-first service is applied to it, and the pipeline and the secrets go in that namespace; the service's
-pod waits for its secret and publishes nothing until it starts. These steps were run against a local
-kind installation of ankka and ankka-flow, with the image and descriptor of release 0.1.1, and the
-launch example recorded and explained through them. They have not been run against a cloud
-installation.
+The order on this page is: the project, the topic, the secret, the sink, the service. These steps
+have not been run on an installation, local or cloud; the descriptors decode under ankka's own rules,
+and the same image and variables run beside the service on a laptop, as
+[Run it on your machine](../get-started/run-locally.md) shows.
 
 ## What the installation must have
 
 - An ankka installation, with the `ankka` CLI logged in to it.
-- ankka-flow [installed](https://flow.ankka.cloud/deploy/install/) on the same cluster, with the
-  `flow` CLI.
-- A Kafka broker both can reach.
-- Neo4j 5.26 or later, and a Kubernetes Secret holding its connection, as the
-  [merge sink](https://flow.ankka.cloud/build/graph-sink/) requires.
+- A Kafka broker the project's services can reach, as the installation provides.
+- Neo4j 5.26 or later, reachable from the project.
 
-The service's writers in a cluster are other ankka services in the installation. A caller through the
-gateway is refused with `401`, so there is nothing to gain from exposing the service yet;
-[Writers, holders and stewards](../concepts/writers-and-holders.md) says why.
-
-## Create the project and apply the service
+## Create the project and declare the topic
 
 ```bash
 ankka projects create reasoning -O <organization>
-ankka services apply -f ankka-reasoning-<version>-service.json -p reasoning
+ankka projects topics set reasoning-graph --partitions 3 --cleanup compact --max-compaction-lag 1d -p reasoning
 ```
 
-The descriptor is the one attached to the release, with the broker and the graph database's address
-written in: [Get the image and the descriptor](#get-the-image-and-the-descriptor) says how. Applying
-it creates the namespace `ankka-reasoning`. The pod does not start yet: its secret does not exist.
+The topic is declared compacted so that the broker keeps the latest delta under every element's key,
+which is what lets the graph be rebuilt from it and lets [withdrawn text](../build/withdraw-text.md)
+leave the log. A topic that came into being on first use would not be compacted. The maximum
+compaction lag, one day, is the longest a superseded delta, and the text it carried, may stay in the
+log; left out, it is `none`, and nothing bounds it.
 
-## Deploy the pipeline
+## Create the secret
 
-The blueprint is
-[`deploy/pipeline/blueprint.conf`](https://github.com/thinkmorestupidless/ankka-reasoning/blob/main/deploy/pipeline/blueprint.conf):
-one streamlet, the built-in merge sink, reading one topic the pipeline owns.
-
-```hocon
-blueprint {
-  name = reasoning-graph
-  streamlets {
-    graph = builtin/neo4j-merge-sink
-  }
-  topics {
-    reasoning-graph {
-      topic.name = "reasoning-graph"
-      consumers  = [graph.in]
-      partitions = 3
-      replicas   = 1
-      consumer-config { auto.offset.reset = earliest }
-      topic { max.compaction.lag.ms = 86400000 }
-    }
-  }
-}
-```
-
-The topic is the pipeline's own so that ankka-flow's operator creates it, compacted, before anything
-is published. ankka creates no topics, and a topic that came into being on first use would not be
-compacted. `max.compaction.lag.ms` is the longest a superseded delta may stay in the log, which is the
-bound on how long [withdrawn text](../build/withdraw-text.md) can remain on the topic: one day.
-
-The sink reaches Neo4j through a Secret named in deploy-time configuration. For a local cluster where
-ankka-flow's own `just neo4j-up` created the Secret `neo4j-local`, that file is
-[`deploy/pipeline/kind.conf`](https://github.com/thinkmorestupidless/ankka-reasoning/blob/main/deploy/pipeline/kind.conf):
-
-```hocon
-flow.streamlets.graph.config { secret = neo4j-local }
-```
-
-Verify, then generate the resource into a file and apply it into the project's namespace:
+The sink writes to Neo4j and the service reads it, both with credentials from the project secret
+`reasoning-graph`. The service only ever reads, so where the two can have different users, give the
+service's one that can do nothing else.
 
 ```bash
-flow verify deploy/pipeline/blueprint.conf --conf deploy/pipeline/kind.conf
-flow generate deploy/pipeline/blueprint.conf --conf deploy/pipeline/kind.conf -n ankka-reasoning -o pipeline.yaml
-kubectl apply -f pipeline.yaml
-kubectl -n ankka-reasoning get aflow
+ankka projects secrets set reasoning-graph username=<neo4j user> password=- -p reasoning
 ```
 
-```text
-NAME              PIPELINE          PHASE   AGE
-reasoning-graph   reasoning-graph   Ready   25s
-```
+`password=-` reads the value from standard input, so it is not left in the shell's history.
 
-The file, not a pipe: `flow` 0.4.0 prints its note about the topic on standard output when it writes
-the resource there too, and `kubectl` then refuses the stream for an unknown field `note`. The sink's
-consumer group is `reasoning-graph.graph.in`.
-
-## Get the image and the descriptor
+## Get the image and the descriptors
 
 Each release publishes the service's image to `ghcr.io/thinkmorestupidless/ankka-reasoning:<version>`
 and attaches two files to its page on GitHub: `ankka-reasoning-<version>-service.json`, the service
 descriptor naming that image and the ankka version it was built against, and
-`ankka-reasoning-<version>-blueprint.conf`, the pipeline's blueprint. No version has been released
-yet, so for now both are built from the repository.
+`ankka-reasoning-<version>-graph-sink.json`, the sink's descriptor naming the sink image the release
+was tested with. The broker and the graph database's address are left in both as placeholders, for the
+deployment to fill in.
 
 To build them from a checkout:
 
@@ -113,12 +63,46 @@ REASONING_DEPLOY_KAFKA=<broker host:port> REASONING_DEPLOY_NEO4J_URI=<bolt addre
 
 `just images` publishes the image `ankka-reasoning:<version>` to the local Docker daemon; set
 `DOCKER_REPOSITORY` to prefix it with a registry, and push it wherever the cluster pulls from.
-`just descriptors` writes `target/deploy/service.json` with the image, the ankka version the service
-was built against, the broker and the graph database's address filled in. A value that is not set is
-left in the file as a placeholder and the command says so; the descriptor a release attaches has the
-broker and the graph database left that way, for the deployment to fill in.
+`just descriptors` writes `target/deploy/service.json` and `target/deploy/graph-sink.json` with the
+images, the ankka version, the broker and the graph database's address filled in. A value that is not
+set is left in the file as a placeholder and the command says so.
 
-The descriptor, before it is filled in:
+## Apply the sink
+
+The sink's descriptor, before it is filled in:
+
+```json
+{
+  "name": "reasoning-graph-sink",
+  "service": {
+    "image": "${SINK_IMAGE}",
+    "http": false,
+    "database": "none",
+    "env": [
+      { "name": "ANKKA_GRAPH_SINK_TOPIC", "value": "reasoning-graph" },
+      { "name": "ANKKA_GRAPH_SINK_VERSION", "value": "1" },
+      { "name": "NEO4J_URI", "value": "${NEO4J_URI}" },
+      { "name": "NEO4J_USERNAME", "secretKeyRef": { "name": "reasoning-graph", "key": "username" } },
+      { "name": "NEO4J_PASSWORD", "secretKeyRef": { "name": "reasoning-graph", "key": "password" } },
+      { "name": "NEO4J_DATABASE", "value": "neo4j" }
+    ]
+  }
+}
+```
+
+```bash
+ankka services apply -f ankka-reasoning-<version>-graph-sink.json -p reasoning
+ankka services get reasoning-graph-sink -p reasoning
+```
+
+The sink serves no HTTP and keeps no state of its own, so nothing is provisioned for it: the topic is
+where it starts from. Its status shows how far behind the topic it is and, while a delta is being
+refused, which. Raising `ANKKA_GRAPH_SINK_VERSION` by one and applying it again reads the topic from
+its start; [Operate the service](operate.md) uses that to rebuild the graph database.
+
+## Apply the service
+
+The service's descriptor, before it is filled in:
 
 ```json
 {
@@ -137,28 +121,33 @@ The descriptor, before it is filled in:
 }
 ```
 
-## Create the secrets
-
-The sink reaches Neo4j through the Secret the deploy-time configuration names, which has to be in the
-project's namespace too: on a local cluster, a copy of `neo4j-local` from the namespace ankka-flow
-created it in. The service reads the graph database with credentials from a Secret of its own,
-`reasoning-graph`. It only ever reads, so give it a Neo4j user that can do nothing else.
-
 ```bash
-kubectl -n ankka-reasoning create secret generic reasoning-graph \
-  --from-literal=username=<neo4j user> \
-  --from-literal=password=<its password>
+ankka services apply -f ankka-reasoning-<version>-service.json -p reasoning
 ankka services list -p reasoning
 ```
 
-```text
-NAME       STATUS  INSTANCES  GEN  IMAGE                                              HOSTNAME
-reasoning  Ready   1/1        1    ghcr.io/thinkmorestupidless/ankka-reasoning:0.1.1  -
+It needs nothing else set. Its database and its HTTP port are ankka's, supplied by the platform.
+[Configuration](../reference/configuration.md) lists every setting, among them `REASONING_STEWARDS`,
+the writers who may withdraw the text of any record.
+
+## Let people write through the gateway
+
+With nothing more set, the service's writers are the other services of the installation and the
+machines registered on its organizations, and a caller through the gateway is refused with `401`. To
+let people write, list the identity providers whose tokens the service accepts, in the service
+descriptor's `env`:
+
+```json
+{ "name": "ANKKA_AUTH_ISSUERS", "value": "staff" },
+{ "name": "ANKKA_AUTH_STAFF_ISSUER", "value": "https://auth.example.com/realms/staff" },
+{ "name": "ANKKA_AUTH_STAFF_JWKS_URL", "value": "https://auth.example.com/realms/staff/protocol/openid-connect/certs" },
+{ "name": "ANKKA_AUTH_STAFF_AUDIENCE", "value": "reasoning" }
 ```
 
-The service is Ready about a minute after its secret exists. It needs nothing else set. Its database and its HTTP port are ankka's, supplied by the
-platform. [Configuration](../reference/configuration.md) lists every setting, among them
-`REASONING_STEWARDS`, the writers who may withdraw the text of any record.
+and expose the service with `ankka services expose`. A person whose token that issuer signed is the
+writer `person:<subject>@staff`. A list with a mistake in it stops the service from starting, naming
+every problem. [Writers, holders and stewards](../concepts/writers-and-holders.md) says who each
+caller is taken to be.
 
 ## Check it from another service
 
@@ -176,21 +165,16 @@ curl -s --cacert ca.crt --cert tls.crt --key tls.key \
   https://reasoning.ankka-reasoning.svc.cluster.local:9000/graph/wait -d '{"kind":"source","id":"cluster-source"}'
 ```
 
-```json
-{"id":"cluster-source","name":"a source","dated":"2026-10-07T06:21:00.009Z","recordedAt":"2026-10-07T06:21:00.009Z","writer":"service:shoppingcart/cart"}
-{"caughtUp":true,"waitedMs":3198,"missing":[]}
-```
-
-A wait that answers `caughtUp: true` has crossed the service, the installation's Kafka, the sink and
-Neo4j. Exposed with `ankka services expose`, the service answers a caller through the gateway with
-`401`, because a person's token is not verified yet.
+The first answers with the source and the writer it was held as. A wait that answers `caughtUp: true`
+has crossed the service, the installation's Kafka, the sink and Neo4j.
 
 ## What each failure looks like
 
 | Symptom | Cause |
 |---|---|
-| every write answers `401` | the caller came through the gateway; call from another ankka service |
+| every write through the gateway answers `401` | the service lists no issuer, or the token is not one a listed issuer signed for the audience; call from another ankka service, or see [Let people write through the gateway](#let-people-write-through-the-gateway) |
+| the service does not start and names the issuers | `ANKKA_AUTH_ISSUERS` or one of its issuer's variables is missing or malformed |
 | `/graph/wait` answers `503` with `graph.unavailable` | no broker or no graph database is set for the service |
-| `/graph/wait` answers `caughtUp: false` and names what is missing | the sink is not running, or cannot reach Neo4j; the record is held all the same |
+| `/graph/wait` answers `caughtUp: false` and names what is missing | the sink is not running, is behind, or cannot reach Neo4j; `ankka services get reasoning-graph-sink` says which. The record is held all the same |
 | every `/answers` route answers `503` | the service cannot reach Neo4j with the address and credentials it was given |
-| the operator reports the topic is not compacted | the topic existed before the pipeline was deployed; delete it and let the pipeline create it |
+| withdrawn text stays in the log past a day | the topic was not declared compacted before the service first published |

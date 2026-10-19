@@ -70,7 +70,7 @@ extra:
   # docs/contributing/documentation.md.
   docs:
     facets:
-      layers: [belief, market]
+      layers: [belief, market, process]
     skills:
       source: tools/docs/skill
       targets:

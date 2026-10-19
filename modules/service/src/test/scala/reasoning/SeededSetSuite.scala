@@ -238,14 +238,17 @@ class SeededSetSuite extends munit.FunSuite:
       assertEquals(has -- named, Set.empty[String], s"$from -[$edgeType]-> $to")
       assertEquals(needed -- has, Set.empty[String], s"$from -[$edgeType]-> $to")
     }
+    // The seeded set is written by writers, so it holds every kind of the two layers writers write
+    // and none of the process layer's, which only a run writes.
+    val written = layers.filter(l => Set("belief", "market").contains(l("name").str))
     assertEquals(
       nodes.map(_._2.head).toSet,
-      ofNode.keySet,
+      written.flatMap(_("nodes").arr.map(_("label").str)).toSet,
       "a kind of node the vocabulary names is not in the seeded set"
     )
     assertEquals(
       edges.map(_._2).toSet,
-      ofEdge.keySet,
+      written.flatMap(_("edges").arr.map(_("type").str)).toSet,
       "a kind of edge the vocabulary names is not in the seeded set"
     )
   }

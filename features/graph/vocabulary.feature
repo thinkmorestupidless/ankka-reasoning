@@ -13,11 +13,17 @@ Feature: The vocabulary and its layers
     Then every node and every edge in the graph is of a kind the vocabulary names
     And every property is one the vocabulary names for that kind
 
-  Scenario: the belief layer names nothing of the market layer
+  Scenario: the belief layer names nothing of the market layer or the process layer
     When a reader reads the belief layer of the vocabulary
     Then no kind of node, kind of edge or property in it belongs to the market layer
+    And no kind of node, kind of edge or property in it belongs to the process layer
 
   Scenario: a layer adds to the layer beneath it and changes nothing in it
     When a reader reads the market layer of the vocabulary
     Then every kind of edge in it runs from a node of the market layer
     And no kind of node of the belief layer has a property from the market layer
+
+  Scenario: every kind of edge in the process layer runs from a node of the process layer
+    When a reader reads the process layer of the vocabulary
+    Then every kind of edge in it runs from a node of the process layer
+    And no kind of node of the belief layer or the market layer has a property from the process layer

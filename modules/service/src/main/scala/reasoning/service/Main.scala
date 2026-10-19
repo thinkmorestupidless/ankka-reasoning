@@ -1,5 +1,7 @@
 package reasoning.service
 
+import com.thinkmorestupidless.ankka.agent.{AgentRuntime, ModelProvider}
+import com.thinkmorestupidless.ankka.agent.judgment.JudgmentProvider
 import com.thinkmorestupidless.ankka.core.ComponentDescriptor
 import com.thinkmorestupidless.ankka.http.{EndpointClients, HttpEndpoint, HttpServer}
 import com.thinkmorestupidless.ankka.runtime.{
@@ -12,6 +14,7 @@ import reasoning.belief.BeliefLayer
 import reasoning.belief.application.{BeliefConfig, Clock}
 import reasoning.graph.{GraphReader, Neo4jGraph, Vocabulary}
 import reasoning.market.MarketLayer
+import reasoning.process.{ProcessConfig, ProcessLayer}
 
 /**
  * The whole service definition.
@@ -27,10 +30,15 @@ object ReasoningService:
    *
    * @param markets
    *   whether the market layer is registered. It always is in a deployed service; a test leaves it
-   *   out to show the belief layer stands alone.
+   *   out to show the belief layer stands alone. The process layer is above it, so goes with it.
+   * @param process
+   *   whether the process layer is registered; a test leaves it out to show the layers beneath it
+   *   stand without it
    */
-  def vocabulary(markets: Boolean = true): Vocabulary =
-    if markets then BeliefLayer.vocabulary ++ MarketLayer.vocabulary else BeliefLayer.vocabulary
+  def vocabulary(markets: Boolean = true, process: Boolean = true): Vocabulary =
+    BeliefLayer.vocabulary ++
+      (if markets then MarketLayer.vocabulary else Vocabulary()) ++
+      (if markets && process then ProcessLayer.vocabulary else Vocabulary())
 
   /** What the belief layer is handed: it reads no settings itself. */
   def beliefConfig(settings: Settings, markets: Boolean = true): BeliefConfig =
@@ -39,6 +47,11 @@ object ReasoningService:
       excerptLimit = settings.excerptLimit,
       stewards = settings.stewards
     )
+
+  /** What the process layer is handed. */
+  def processConfig(settings: Settings): ProcessConfig =
+    val _ = settings
+    ProcessConfig()
 
   /**
    * Every component the service hosts.
@@ -50,13 +63,36 @@ object ReasoningService:
   def components(
       settings: Settings,
       publishing: Boolean,
-      markets: Boolean = true
+      markets: Boolean = true,
+      process: Boolean = true,
+      clock: Clock = Clock.system
   ): Seq[ComponentDescriptor] =
+    val processing = markets && process
     BeliefLayer.components ++
       (if markets then MarketLayer.components else Seq.empty) ++
+      (if processing then
+         AgentRuntime.descriptors ++
+           ProcessLayer.components(clock, beliefConfig(settings), processConfig(settings))
+       else Seq.empty) ++
       (if publishing then BeliefLayer.graphComponents(settings.graphTopic) else Seq.empty) ++
       (if publishing && markets then MarketLayer.graphComponents(settings.graphTopic)
+       else Seq.empty) ++
+      (if publishing && processing then ProcessLayer.graphComponents(settings.graphTopic)
        else Seq.empty)
+
+  /**
+   * ankka's agents, hosting this service's blueprints: their versions and runs are records of this
+   * service's own, which the process layer follows. A run asks `model` and `judgments`.
+   */
+  def agents(
+      settings: Settings,
+      model: ModelProvider,
+      judgments: JudgmentProvider
+  ): AgentRuntime =
+    AgentRuntime
+      .withDefaultModel(model)
+      .withJudgments(judgments)
+      .withBlueprints(ProcessLayer.registry(_, processConfig(settings)))
 
   /** The graph database the answers read, or the reader that says there is none. */
   def graph(settings: Settings): GraphReader = settings.graph.fold(GraphReader.none)(Neo4jGraph(_))
@@ -67,21 +103,28 @@ object ReasoningService:
       clock: Clock,
       graph: GraphReader,
       publishing: Boolean,
-      markets: Boolean = true
+      markets: Boolean = true,
+      process: Boolean = true
   ): Seq[EndpointClients => HttpEndpoint] =
-    val config = beliefConfig(settings, markets)
-    val layers = BeliefLayer.endpoints(clock, config, graph, Writers.acl) ++
-      (if markets then MarketLayer.endpoints(clock, config, graph, Writers.acl) else Seq.empty)
+    val config     = beliefConfig(settings, markets)
+    val writers    = Writers.acl(settings.people)
+    val processing = markets && process
+    val layers = BeliefLayer.endpoints(clock, config, graph, writers) ++
+      (if markets then MarketLayer.endpoints(clock, config, graph, writers) else Seq.empty) ++
+      (if processing then ProcessLayer.endpoints(clock, config, graph, writers) else Seq.empty)
     layers :+ { (clients: EndpointClients) =>
       val recorder = BeliefLayer.recorder(clients, clock, config)
       val market   = MarketLayer.recorder(clients, clock, config)
+      val runs     = ProcessLayer.recorder(clients, clock, config)
       GraphEndpoint(
         graph,
-        vocabulary(markets),
-        Seq(recorder.published) ++ (if markets then Seq(market.published) else Seq.empty),
+        vocabulary(markets, process),
+        Seq(recorder.published) ++
+          (if markets then Seq(market.published) else Seq.empty) ++
+          (if processing then Seq(runs.published) else Seq.empty),
         publishing,
         settings.waitLimitMaxMs,
-        Writers.acl
+        writers
       )
     }
 
@@ -93,6 +136,7 @@ object ReasoningService:
   def extensions(settings: Settings, graph: GraphReader): Seq[RuntimeExtension] =
     Seq(
       ProjectionRuntime.fromEnv(),
+      agents(settings, Providers.model(), Providers.judgments()),
       HttpServer.of(endpoints(settings, Clock.system, graph, publishing())*)
     )
 

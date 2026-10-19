@@ -1,14 +1,14 @@
 ---
 name: ankka-reasoning
-description: What ankka-reasoning is and how to use it — a reasoning graph on ankka that holds questions, hypotheses, holders, sources, evidence, claims and belief revisions as records that are never edited, publishes them to Neo4j through an ankka-flow merge sink, and answers why a belief changed, what was believed at a past time and where two holders differ; also markets, price observations and resolutions, withdrawing text, the HTTP API, every refusal and the graph vocabulary. Use for any question about recording reasoning in ankka-reasoning, asking it for explanations, querying its graph, or deploying it.
+description: What ankka-reasoning is and how to use it — a reasoning graph on ankka that holds questions, hypotheses, holders, sources, evidence, claims and belief revisions as records that are never edited, publishes them to Neo4j through ankka's graph sink, and answers why a belief changed, what was believed at a past time and where two holders differ; also markets, price observations and resolutions, withdrawing text, the HTTP API, every refusal and the graph vocabulary. Use for any question about recording reasoning in ankka-reasoning, asking it for explanations, querying its graph, or deploying it.
 ---
 
 # ankka-reasoning
 
 ankka-reasoning is a reasoning graph: a record of how beliefs form and change. A writer sends records
 over HTTP to one ankka service. Each record is checked against the records already held, kept or
-refused by name, and published as a node with its edges to a compacted Kafka topic that ankka-flow's
-merge sink copies into Neo4j. A reader asks the service for answers, each a walk of that graph made of
+refused by name, and published as a node with its edges to a compacted Kafka topic that ankka's
+graph sink copies into Neo4j. A reader asks the service for answers, each a walk of that graph made of
 records only.
 
 ## Rules
@@ -33,9 +33,11 @@ records only.
 6. **Match on `rule`, never on `error`.** A refusal is `{status, error, rule, names}`. `rule` is
    stable; `error` is a sentence for a person. `names` holds what broke the rule.
 7. **The writer is not in the request.** The service decides it from the connection:
-   `service:<project>/<name>` for another ankka service, `local` outside a cluster, and `401` for a
-   caller through the gateway. A writer states claims and beliefs only for a holder it speaks for,
-   else `403` and `holder.writer.does-not-speak`.
+   `service:<project>/<name>` for another ankka service, `machine:<organization>/<name>` for a
+   registered machine, `person:<subject>@<issuer name>` for a person through the gateway with a token
+   from an issuer the service lists in `ANKKA_AUTH_ISSUERS`, `local` outside a cluster, and `401` for
+   a caller through the gateway without such a token. A writer states claims and beliefs only for a
+   holder it speaks for, else `403` and `holder.writer.does-not-speak`.
 8. **The graph follows a write by a few seconds.** A write is answered when the record is held, not
    when the graph has it. Before reading the graph for something just written, call
    `POST /graph/wait` with `{kind, id}`. Routes under `/answers`, and a market's `resolution` and
@@ -72,8 +74,8 @@ records only.
 - Treating `caughtUp: false` from `/graph/wait` as a failed write. The record is held.
 - Expecting a withdrawn record to disappear from answers. It stays, marked `withdrawn`, without its
   text.
-- Expecting a person's token to work. A caller through the gateway is refused until ankka releases
-  its token verifier; see the limitations page.
+- Expecting a person's token to work against a service that lists no issuer. Without
+  `ANKKA_AUTH_ISSUERS`, every caller through the gateway is refused with `401`.
 
 ## Reference files
 
@@ -85,7 +87,7 @@ Open the one a task needs; each is one topic and stands alone.
 
 ### Get started
 
-- `references/get-started/run-locally.md` — Start the ankka-reasoning service on a laptop with Postgres, Kafka, the merge sink and Neo4j beside it, and check that a record reaches the graph.
+- `references/get-started/run-locally.md` — Start the ankka-reasoning service on a laptop with Postgres, Kafka, the graph sink and Neo4j beside it, and check that a record reaches the graph.
 - `references/get-started/first-explanation.md` — Record the launch example with one command, wait for the graph, then ask why a belief changed and what was believed on an earlier day.
 
 ### Concepts
@@ -94,7 +96,7 @@ Open the one a task needs; each is one topic and stands alone.
 - `references/concepts/records-and-links.md` — The kinds of record ankka-reasoning holds, the links each one states, and the three rules that keep the graph a history that cannot loop or be rewritten.
 - `references/concepts/nothing-is-edited.md` — Why a record is never changed once held, how thinking again is recorded instead, and the one exception, withdrawing text, with what it leaves behind.
 - `references/concepts/two-times.md` — The difference between when a record is dated and when it was recorded, and how asOf and asRecordedBy use each to answer a question about the past.
-- `references/concepts/layers.md` — How the graph's vocabulary is divided into a belief layer and a market layer, what a layer may and may not do, and how the vocabulary is enforced.
+- `references/concepts/layers.md` — How the graph's vocabulary is divided into a belief layer, a market layer and a process layer, what a layer may and may not do, and how the vocabulary is enforced.
 - `references/concepts/writers-and-holders.md` — Who a caller is taken to be, how a writer comes to speak for a holder, what that permits, and what a steward may do that other writers may not.
 
 ### Build
@@ -108,7 +110,7 @@ Open the one a task needs; each is one topic and stands alone.
 
 ### Deploy and operate
 
-- `references/deploy/deploy-on-ankka.md` — Deploy the pipeline that fills the graph database, then the ankka-reasoning service, to an ankka installation with ankka-flow, Kafka and Neo4j, and know which of these steps is unproven.
+- `references/deploy/deploy-on-ankka.md` — Deploy the graph sink that fills the graph database, then the ankka-reasoning service, to an ankka installation with Kafka and Neo4j, let people write through the gateway, and know which of these steps is unproven.
 - `references/deploy/operate.md` — Rebuild the graph database from the topic, measure how long a record takes to reach the graph, know what withdrawing text removes and when, and read the service's failures.
 
 ### Reference

@@ -20,12 +20,18 @@ in a body or a header names it.
 | The caller is | The writer is |
 |---|---|
 | another ankka service, identified by its certificate | `service:<project>/<name>` |
+| a machine registered on an organization, verified by the platform | `machine:<organization>/<name>` |
+| a person arriving through the gateway with a token an accepted issuer signed | `person:<subject>@<issuer name>` |
 | anything, when the service runs outside a cluster | `local` |
-| a caller arriving through the gateway | refused with `401` |
+| a caller arriving through the gateway with no token, or one no accepted issuer signed | refused with `401` |
 
-A caller through the gateway is refused because a person's token cannot be verified yet: the verifier
-ankka provides for one is not in a released version of ankka. Until it is, the writers of a deployed
-service are other ankka services in the installation.
+A person's token is verified by ankka's `ankka-auth-oidc` against the issuers the service lists in
+`ANKKA_AUTH_ISSUERS`, as [Configuration](../reference/configuration.md) describes. The subject is the
+token's `sub` and the issuer name is the service's own word for the issuer, so the same person signed
+in through two issuers is two writers. A service that lists no issuer refuses every caller through the
+gateway, and its writers are the services and machines of the installation. A token sent by a caller
+that has a connection of its own, another service or a machine, changes nothing: the connection
+decides.
 
 Outside a cluster there are no certificates, so every caller is the one writer `local`. That is for a
 laptop: with a single writer, "speaks for" refuses nobody.

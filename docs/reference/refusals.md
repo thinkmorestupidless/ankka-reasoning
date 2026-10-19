@@ -45,7 +45,7 @@ value of the wrong type or a missing required query parameter, is ankka's own `4
 | Status | Means |
 |---|---|
 | `400` | The request could not be read. No `rule`. |
-| `401` | The caller could not be identified as a writer. Today that is every caller through the gateway. |
+| `401` | The caller could not be identified as a writer: a caller through the gateway with no token, or one no issuer the service lists signed. |
 | `403` | The writer does not speak for the holder, or may not withdraw the record. |
 | `404` | A read, a wait or a withdrawal named a record that is not held. |
 | `409` | The identifier is held by a different record, or a revision or resolution does not follow the current one. |

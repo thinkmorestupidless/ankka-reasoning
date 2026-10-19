@@ -17,8 +17,7 @@ import scala.concurrent.duration.DurationInt
  * own, so the suites share one running service without seeing each other's records. A refusal is
  * checked by its rule and by what it names, since a status alone passes for the wrong refusal.
  */
-abstract class FeatureSuite(feature: String)
-    extends GherkinSuite(FeatureSuite.directoryOf(feature)):
+abstract class FeatureSuite(feature: String) extends GherkinSuite(feature):
 
   override val munitTimeout = 5.minutes
 
@@ -31,6 +30,8 @@ abstract class FeatureSuite(feature: String)
 
   override def beforeEach(context: BeforeEach): Unit =
     clock.set(clockStart)
+    ServiceFixture.model.reset()
+    ServiceFixture.judge.reset()
     w = World(s"${FeatureSuite.tag(feature)}${FeatureSuite.next()}")
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -998,25 +999,6 @@ abstract class FeatureSuite(feature: String)
 object FeatureSuite:
 
   private val counter = AtomicInteger(0)
-
-  /**
-   * A directory holding a copy of one feature file and nothing else.
-   *
-   * ankka-testkit 0.10.0's `GherkinSuite` runs every feature under a directory and cannot be given
-   * one file; the release after it can. Until this build moves to it, each suite is handed a
-   * directory of its own, so that a suite never meets the steps of a feature that is not built yet.
-   */
-  def directoryOf(feature: String): String =
-    val source = java.nio.file.Paths.get(feature)
-    val directory = java.nio.file.Paths
-      .get("target", "feature-suites", source.getFileName.toString.stripSuffix(".feature"))
-    val _ = java.nio.file.Files.createDirectories(directory)
-    java.nio.file.Files.copy(
-      source,
-      directory.resolve(source.getFileName),
-      java.nio.file.StandardCopyOption.REPLACE_EXISTING
-    ): Unit
-    directory.toString
 
   def next(): Int = counter.incrementAndGet()
 

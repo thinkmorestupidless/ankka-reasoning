@@ -18,7 +18,7 @@ not a command run by hand. The workflow is
 |---|---|---|
 | `release-page` | the release page, with generated notes | GitHub releases |
 | `libraries` | `ankka-reasoning-graph`, `ankka-reasoning-belief`, `ankka-reasoning-market`, signed, with sources and documentation | Maven Central, group `com.thinkmorestupidless` |
-| `image` | the service's image, tagged with the version and `latest`; then the service descriptor naming that image and the pipeline's blueprint, attached to the release page | `ghcr.io/thinkmorestupidless/ankka-reasoning` |
+| `image` | the service's image, tagged with the version and `latest`; then the service descriptor naming that image and the graph sink's descriptor naming the sink image the build pins, attached to the release page | `ghcr.io/thinkmorestupidless/ankka-reasoning` |
 | `marketplace` | the documentation as a Claude Code plugin, at this version | the repository `thinkmorestupidless/ankka-marketplace` |
 
 The documentation site is not part of a release. It is published from `main` by `docs.yml`, so it
@@ -126,7 +126,7 @@ git push origin v0.1.0
 Then check each thing it published:
 
 - the workflow run for the tag, every job green;
-- the release page, with `ankka-reasoning-0.1.0-service.json` and `ankka-reasoning-0.1.0-blueprint.conf` attached;
+- the release page, with `ankka-reasoning-0.1.0-service.json` and `ankka-reasoning-0.1.0-graph-sink.json` attached;
 - `docker pull ghcr.io/thinkmorestupidless/ankka-reasoning:0.1.0`, from a machine that is not logged in to `ghcr.io`;
 - `https://repo1.maven.org/maven2/com/thinkmorestupidless/ankka-reasoning-belief_3/0.1.0/`, which
   follows the upload by minutes to an hour;

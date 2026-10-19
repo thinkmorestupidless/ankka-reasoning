@@ -30,8 +30,11 @@ is a `POST` of its own.
   evidence has no `excerpt`. Nothing is sent as `null`.
 - **An identifier is 1 to 64 characters of `[A-Za-z0-9._-]`, starting with a letter or a digit.** A
   market's is at most 32 and an outcome name at most 16.
-- **Who the caller is decides the writer.** Another ankka service is `service:<project>/<name>`.
-  Outside a cluster every caller is `local`. A caller through the gateway is answered `401`.
+- **Who the caller is decides the writer.** Another ankka service is `service:<project>/<name>`, a
+  registered machine `machine:<organization>/<name>`, and a person through the gateway with a token
+  from an accepted issuer `person:<subject>@<issuer name>`. Outside a cluster every caller is
+  `local`. A caller through the gateway with no token, or one no accepted issuer signed, is answered
+  `401`.
 
 ```bash
 curl -s localhost:9000/sources -d '{"id":"regulator","name":"the regulator"}'

@@ -8,7 +8,7 @@ where it came from, claims are derived from evidence, hypotheses compete to answ
 belief is one holder's probability for one hypothesis. Nothing in it is ever edited, so any belief can
 be traced to its sources, read back as it stood on any past day, and set beside a belief that disagrees
 with it. It is an [ankka](https://docs.ankka.cloud/) application, and it keeps its graph in Neo4j
-through an [ankka-flow](https://flow.ankka.cloud/) pipeline.
+through ankka's [graph sink](https://docs.ankka.cloud/deploy/graph-sink/).
 
 ## The three questions
 
@@ -38,14 +38,14 @@ A prediction market is the first domain it is built for. A market says the crowd
 - Records are **never edited**. Thinking again is a new record linked to the old one: a claim that
   revises a claim, a belief revision that follows the one before.
 - Every record is published as a **node** and every link it stated as an **edge**, to a compacted
-  Kafka topic, and ankka-flow's merge sink keeps them in **Neo4j**. The graph database is a copy that
+  Kafka topic, and ankka's graph sink keeps them in **Neo4j**. The graph database is a copy that
   can be emptied and rebuilt from the topic.
 - A reader asks for **answers**: why a belief changed, the case for a hypothesis, what was believed as
   of a date, where two holders differ. Each is a walk of the graph, made of records only.
 - The vocabulary is in **layers**. The belief layer names nothing of markets; the market layer adds
   markets and resolutions on top and changes nothing beneath it.
 
-![How ankka-reasoning works. Writers, a person, a script or a test, send records to the ankka-reasoning service, which runs in an ankka project. Inside the service, Records holds one entity per record, never edited, and checks every rule against the service's own records; every record is kept in the service's Postgres database. Each change goes to the graph consumers, one per kind of record, which turn each record into a node and each link it stated into an edge and publish them as graph deltas to a compacted delta topic in Kafka under the contract ankka.graph-delta.v1. An ankka-flow pipeline that is the built-in Neo4j merge sink alone reads the topic and merges each delta into the graph database, Neo4j, which is a copy that can be emptied and rebuilt from the topic alone. Readers ask the service's Answers, which query the graph database, read only, and reply with records only. A write never waits for the graph.](assets/diagrams/architecture.svg)
+![How ankka-reasoning works. Writers, a person, a script or a test, send records to the ankka-reasoning service, which runs in an ankka project. Inside the service, Records holds one entity per record, never edited, and checks every rule against the service's own records; every record is kept in the service's Postgres database. Each change goes to the graph consumers, one per kind of record, which turn each record into a node and each link it stated into an edge and publish them as graph deltas to a compacted delta topic in Kafka under the contract ankka.graph-delta.v1. The graph sink, a second service in the same project that runs ankka's graph sink over ankka-contrib's Neo4j store, reads the topic and merges each delta into the graph database, Neo4j, which is a copy that can be emptied and rebuilt from the topic alone. Readers ask the service's Answers, which query the graph database, read only, and reply with records only. A write never waits for the graph.](assets/diagrams/architecture.svg)
 
 ## An example
 
@@ -74,7 +74,7 @@ the first claim. [Your first explanation](get-started/first-explanation.md) does
 ## Where to start
 
 - **Trying it.** [Run it on your machine](get-started/run-locally.md) starts the service with Kafka,
-  the merge sink and Neo4j beside it; [Your first explanation](get-started/first-explanation.md)
+  the graph sink and Neo4j beside it; [Your first explanation](get-started/first-explanation.md)
   records the example and asks why the belief changed.
 - **Understanding it.** [How ankka-reasoning works](concepts/architecture.md) is the overview.
   [Records and links](concepts/records-and-links.md), [Nothing is edited](concepts/nothing-is-edited.md)
