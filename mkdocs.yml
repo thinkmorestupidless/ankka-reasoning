@@ -20,6 +20,8 @@ validation:
 
 theme:
   name: material
+  # The header is black in both schemes, so the logo is the white mark; the favicon sits on a tab bar
+  # that is usually light, so it is the black one.
   logo: assets/brand/ankka-reasoning-mark-white-256.png
   favicon: assets/brand/favicon.png
   features:
