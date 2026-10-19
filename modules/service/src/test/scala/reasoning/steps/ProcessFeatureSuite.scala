@@ -1,15 +1,15 @@
 package reasoning.steps
 
-import com.thinkmorestupidless.ankka.agent.Json
+import com.thinkmorestupidless.ankka.agent.{AgentRuntime, Json}
 import com.thinkmorestupidless.ankka.agent.blueprint.{RunContext, RunRef}
 import reasoning.belief.application.SettableClock
-import reasoning.belief.domain.Evidence
+import reasoning.belief.domain.{Evidence, Moment}
 import reasoning.process.ProcessLayer
 import reasoning.process.appraiser.{Appraiser, GoldenSet}
 import reasoning.process.domain.Ids
 import reasoning.process.tools.{RunReads, RunResolver, Tools}
 import reasoning.service.ReasoningService
-import reasoning.support.{Eventually, Http, ServiceFixture}
+import reasoning.support.{Eventually, GraphFixture, Http, ServiceFixture}
 import ujson.Obj
 
 import scala.concurrent.duration.DurationInt
@@ -27,7 +27,17 @@ abstract class ProcessFeatureSuite(feature: String, graph: Boolean = false)
   override protected def http: Http           = if graph then super.http else ServiceFixture.http
   override protected def clock: SettableClock = if graph then super.clock else ServiceFixture.clock
 
+  /** ankka's agents of the fixture the feature runs against. */
+  protected def agents: AgentRuntime = if graph then GraphFixture.agents else ServiceFixture.agents
+
   protected val goldenSet: GoldenSet = GoldenSet(ServiceFixture.settings.goldenSet)
+
+  /** The process layer's nodes a scenario published, for a snapshot of the graph to take in. */
+  override protected def extraNodeIds: Vector[String] =
+    w.published.map((kind, id) => if kind == "act" then id else s"$kind:$id")
+
+  override protected def beforeRebuild(): Unit =
+    w.notes.get("run").foreach(run => w.notes("wrote") = wroteBy(run).body)
 
   protected val Blueprint = Appraiser.Name
   protected val HolderA   = "appraiser-a"
@@ -122,14 +132,15 @@ abstract class ProcessFeatureSuite(feature: String, graph: Boolean = false)
   Given(
     "the appraiser, registered at blueprint version 1, whose worker {string} speaks for the holder {string}"
   ) { (worker: String, holder: String) =>
-    val versions = ServiceFixture.agents.blueprints.versions(Blueprint)
+    val versions = agents.blueprints.versions(Blueprint)
     assert(versions.exists(_.number == 1), versions.toString)
     assert(
-      ServiceFixture.agents.blueprints.version(Blueprint, 1).workers.exists(_.name == worker),
+      agents.blueprints.version(Blueprint, 1).workers.exists(_.name == worker),
       s"no worker $worker"
     )
     val record = held(s"/holders/$holder")
     assert(record("writers").arr.exists(_.str == Writer), record.render())
+    w.published :+= "blueprint-version" -> Ids.version(Blueprint, 1)
   }
 
   Given("a scripted model")(() => script.install())
@@ -400,8 +411,11 @@ abstract class ProcessFeatureSuite(feature: String, graph: Boolean = false)
     "a run of the appraiser under the run id {string} that recorded five pieces of evidence and stated five claims"
   ) { (id: String) =>
     run(id = runId(id))
-    assertEquals(actsOf(w.notes("run"), "evidence").size, 5)
-    assertEquals(actsOf(w.notes("run"), "claim").size, 5)
+    // The rows the acts are listed from may lag the writes by a moment.
+    Eventually.eventually(60.seconds) {
+      assertEquals(actsOf(w.notes("run"), "evidence").size, 5)
+      assertEquals(actsOf(w.notes("run"), "claim").size, 5)
+    }
   }
 
   When("the run is sent again under the run id {string}") { (id: String) =>
@@ -412,7 +426,11 @@ abstract class ProcessFeatureSuite(feature: String, graph: Boolean = false)
   }
 
   Then("five pieces of evidence, five claims and one belief revision are held") { () =>
-    val all = acts(w.notes("run"))
+    val all = Eventually.eventually(60.seconds) {
+      val all = acts(w.notes("run"))
+      assertEquals(all.size, 11, all.map(_("record")).mkString(", "))
+      all
+    }
     assertEquals(all.count(_("record")("kind").str == "evidence"), 5)
     assertEquals(all.count(_("record")("kind").str == "claim"), 5)
     assertEquals(all.count(_("record")("kind").str == "revision"), 1)
@@ -480,4 +498,218 @@ abstract class ProcessFeatureSuite(feature: String, graph: Boolean = false)
   Then("the writer is told the tool was called in no run") { () =>
     assertEquals(w.notes("refused"), "true", w.notes("told"))
     assert(w.notes("told").contains("tool.called-in-no-run"), w.notes("told"))
+  }
+
+  // ── In the graph ──────────────────────────────────────────────────────────
+
+  /** What a run wrote, as the graph answers it. */
+  protected def wroteBy(run: String) = http.get(s"/process/answers/run?run=$run")
+
+  private def millis(iso: String): Long = Moment.parse(iso).get.millis
+
+  /** The acts of a run walked in the graph: each act's properties, the record and the holder. */
+  private var walkedActs: Vector[(Map[String, Any], Option[String], Option[String])] = Vector.empty
+
+  Given(
+    "a run of the appraiser under the run id {string} over the May tranche, which has ended"
+  ) { (id: String) =>
+    val run = this.run(id = runId(id))
+    // The rows the acts are listed from may lag the writes by a moment.
+    val held = Eventually.eventually(60.seconds) {
+      val all = acts(run)
+      assertEquals(all.size, 11, all.map(_("record")).mkString(", "))
+      all
+    }
+    w.published ++= Vector("run" -> run, "run-ending" -> run) ++
+      held.map(a => "act" -> a("id").str) ++
+      held.map(a => a("record")("kind").str -> a("record")("id").str)
+  }
+
+  Then(
+    "the graph has a node for blueprint version {int} of the appraiser, with its name, its version and when it was registered"
+  ) { (version: Int) =>
+    val registered = agents.blueprints.versions(Blueprint).find(_.number == version).get
+    val node = graphRows(
+      "MATCH (v:BlueprintVersion {id: $id}) RETURN properties(v) AS v",
+      "id" -> s"blueprint-version:${Ids.version(Blueprint, version)}"
+    )(_.properties("v"))
+    assertEquals(node.size, 1, node.toString)
+    assertEquals(node.head("blueprint"), Blueprint)
+    assertEquals(node.head("version"), version.toLong)
+    assertEquals(node.head("digest"), registered.digest)
+    assertEquals(node.head("dated"), registered.registeredAt)
+  }
+
+  Then(
+    "the graph has a node for the run {string} with when it started, and an edge to the node of blueprint version {int}"
+  ) { (id: String, version: Int) =>
+    val run  = runId(id)
+    val held = this.held(s"/process/runs/$run")("run")
+    val node = graphRows(
+      "MATCH (r:Run {id: $id}) RETURN properties(r) AS r, [(r)-[:OF]->(v) | v.id] AS versions",
+      "id" -> s"run:$run"
+    )(row => (row.properties("r"), row.strings("versions")))
+    assertEquals(node.size, 1, node.toString)
+    val (properties, versions) = node.head
+    assertEquals(properties("blueprint"), Blueprint)
+    assertEquals(properties("version"), version.toLong)
+    assertEquals(properties("startedBy"), held("startedBy").str)
+    assertEquals(properties("dated"), millis(held("dated").str))
+    assertEquals(versions, Vector(s"blueprint-version:${Ids.version(Blueprint, version)}"))
+  }
+
+  Then(
+    "the graph has a node for the run's run ending with the run status {string} and when it ended, and an edge to the run's node"
+  ) { (status: String) =>
+    val run  = w.notes("run")
+    val held = ending(run)
+    val node = graphRows(
+      "MATCH (e:RunEnding {id: $id}) RETURN properties(e) AS e, [(e)-[:ENDED]->(r) | r.id] AS runs",
+      "id" -> s"run-ending:$run"
+    )(row => (row.properties("e"), row.strings("runs")))
+    assertEquals(node.size, 1, node.toString)
+    val (properties, runs) = node.head
+    assertEquals(properties("status"), status)
+    assertEquals(held("status").str, status)
+    assertEquals(properties("dated"), millis(held("dated").str))
+    assertEquals(runs, Vector(s"run:$run"))
+  }
+
+  When("a reader walks the edges from the node of each act of the run") { () =>
+    walkedActs = graphRows(
+      "MATCH (a:Act)-[:IN]->(:Run {id: $run}) " +
+        "RETURN properties(a) AS act, [(a)-[:WROTE]->(x) | x.id][0] AS record, [(a)-[:AS]->(h) | h.id][0] AS holder",
+      "run" -> s"run:${w.notes("run")}"
+    )(row => (row.properties("act"), row.stringOption("record"), row.stringOption("holder")))
+    assertEquals(walkedActs.size, 11, walkedActs.toString)
+  }
+
+  Then("each act's node has its step and its worker") { () =>
+    val held = acts(w.notes("run")).map(a => a("id").str -> a).toMap
+    walkedActs.foreach { (act, _, _) =>
+      val id = act("id").toString
+      assertEquals(act("step"), held(id)("step").str, id)
+      assertEquals(act("worker"), held(id)("worker").str, id)
+      assertEquals(act("recordKind"), held(id)("record")("kind").str, id)
+    }
+    assertEquals(walkedActs.map(_._1("id").toString).toSet, held.keySet)
+  }
+
+  Then(
+    "each act's node has an edge to the run's node, an edge to the node of the record it wrote and an edge to the node of the holder {string}"
+  ) { (holder: String) =>
+    val held = acts(w.notes("run")).map(a => a("id").str -> a).toMap
+    walkedActs.foreach { (act, record, holderNode) =>
+      val id = act("id").toString
+      assertEquals(
+        record,
+        Some(s"${held(id)("record")("kind").str}:${held(id)("record")("id").str}")
+      )
+      assertEquals(holderNode, Some(s"holder:$holder"))
+    }
+  }
+
+  When("a reader walks the edges from the node of the current belief revision of {string}") {
+    (holder: String) =>
+      val current = held(s"/beliefs/current?holder=$holder&hypothesis=${w.hypothesis}")("current")
+      w.revision = current("id").str
+      val walked = graphRows(
+        "MATCH (r:BeliefRevision {id: $revision})<-[:WROTE]-(a:Act)-[:IN]->(run:Run)-[:OF]->(v:BlueprintVersion) " +
+          "RETURN a.id AS act, run.id AS run, v.id AS version",
+        "revision" -> s"revision:${w.revision}"
+      )(row => (row.string("act"), row.string("run"), row.string("version")))
+      assertEquals(walked.size, 1, walked.toString)
+      w.notes("act") = walked.head._1
+      w.notes("walkedRun") = walked.head._2
+      w.notes("version") = walked.head._3
+  }
+
+  Then(
+    "the reader reaches the act that wrote it, the run {string} and blueprint version {int} of the appraiser"
+  ) { (id: String, version: Int) =>
+    val act = actOf("revision", w.revision).getOrElse(fail("the revision has no act"))
+    assertEquals(w.notes("act"), act("id").str)
+    assertEquals(w.notes("walkedRun"), s"run:${runId(id)}")
+    assertEquals(w.notes("version"), s"blueprint-version:${Ids.version(Blueprint, version)}")
+  }
+
+  When("a reader asks what the run {string} wrote")((id: String) => w.last = wroteBy(runId(id)))
+
+  Then(
+    "the reader is given five pieces of evidence, five claims and one belief revision, each with its act"
+  ) { () =>
+    assertEquals(w.last.status, 200, w.last.body)
+    val answer = w.last.json
+    assertEquals(answer("run")("id").str, w.notes("run"))
+    assertEquals(answer("ending")("status").str, "completed")
+    val wrote = answer("wrote").arr.toVector
+    val kinds = wrote.groupBy(_("record")("kind").str).map((k, v) => k -> v.size)
+    assertEquals(kinds, Map("evidence" -> 5, "claim" -> 5, "revision" -> 1))
+    val held = acts(w.notes("run")).map(a => a("id").str -> a).toMap
+    wrote.foreach { entry =>
+      val act = held.getOrElse(entry("act")("id").str, fail(s"an act not held: ${entry.render()}"))
+      assertEquals(entry("record")("id").str, act("record")("id").str)
+      assertEquals(entry("act")("step").str, act("step").str)
+      assertEquals(entry("act")("worker").str, act("worker").str)
+    }
+  }
+
+  When("a run of the appraiser records evidence and waits for the graph") { () =>
+    run()
+    w.evidence = evidenceId("may", "filing")
+    w.source = document("may", "filing").source
+    w.answers = Vector(
+      http.post("/graph/wait", Obj("kind" -> "evidence", "id" -> w.evidence, "limitMs" -> 30000))
+    )
+    val act = Eventually.eventually()(actOf("evidence", w.evidence).getOrElse(fail("no act")))
+    w.notes("act") = act("id").str
+    w.answers :+= http.post(
+      "/graph/wait",
+      Obj("kind" -> "act", "id" -> w.notes("act"), "limitMs" -> 30000)
+    )
+    w.last = w.answers.last
+  }
+
+  Then(
+    "the wait ends when the graph has a node for that evidence, an edge for each link it stated, a node for its act and the act's edges"
+  ) { () =>
+    w.answers.foreach { answer =>
+      assertEquals(answer.status, 200, answer.body)
+      assert(answer.json("caughtUp").bool, answer.body)
+      assertEquals(answer.json("missing").arr.size, 0, answer.body)
+    }
+    val evidence = graphRows(
+      "MATCH (e:Evidence {id: $id}) RETURN [(e)-[:FROM_SOURCE]->(s) | s.id] AS sources",
+      "id" -> s"evidence:${w.evidence}"
+    )(_.strings("sources"))
+    assertEquals(evidence, Vector(Vector(s"source:${w.source}")))
+    val act = graphRows(
+      "MATCH (a:Act {id: $id}) RETURN [(a)-[:IN]->(r) | r.id] AS runs, [(a)-[:WROTE]->(x) | x.id] AS records, [(a)-[:AS]->(h) | h.id] AS holders",
+      "id" -> w.notes("act")
+    )(row => (row.strings("runs"), row.strings("records"), row.strings("holders")))
+    assertEquals(
+      act,
+      Vector(
+        (
+          Vector(s"run:${w.notes("run")}"),
+          Vector(s"evidence:${w.evidence}"),
+          Vector(s"holder:$HolderA")
+        )
+      )
+    )
+  }
+
+  Then(
+    "the graph is as it was, the blueprint version, the run, its run ending and every act with it"
+  ) { () =>
+    val (nodes, edges) = snapshot()
+    assertEquals(nodes.toVector.sorted.mkString("\n"), w.notes("nodes"))
+    assertEquals(edges.toVector.sorted.mkString("\n"), w.notes("edges"))
+    val ids = nodes.map(_.takeWhile(_ != ' '))
+    val run = w.notes("run")
+    assert(ids.contains(s"blueprint-version:${Ids.version(Blueprint, 1)}"), ids.toString)
+    assert(ids.contains(s"run:$run"), ids.toString)
+    assert(ids.contains(s"run-ending:$run"), ids.toString)
+    assertEquals(ids.count(_.startsWith("act:")), 11)
+    assertEquals(wroteBy(run).body, w.notes("wrote"))
   }

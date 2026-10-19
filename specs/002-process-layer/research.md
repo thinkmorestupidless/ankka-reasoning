@@ -539,6 +539,20 @@ or start time, and holding the run from it built an empty entity id. `RunsEndpoi
 and then reads it back; `RunResolver` never trusts a snapshot's `runId`, only the id it asked for.
 Request 19.
 
+**V7. Holds, with a lag.** `BlueprintVersions` over `eventsOf(BlueprintEntity)` receives
+`VersionRegistered` for the blueprint the service carries, and `RunFollower` over
+`eventsOf(RunEntity)` receives `Started` and `Ended`; the version, the run and its ending are in
+the graph with their edges (*a blueprint version is in the graph when it is registered*, *a run is
+in the graph with the version it ran…*). The registration happens as the runtime starts and the
+projection delivers it a few seconds later, so a reader who asks the moment the service is ready
+finds no version yet: the suites' catch-up wait asks again for a record not yet held, and a run
+holds its version itself when it comes first (R7).
+
+**V11. Holds, so far as phase 3 saw.** A handler that throws fails the run with its message in
+`reason` and no later step runs: *revises a belief dated before the claim it rests on* fails an
+earlier run's critique and finds its ending `failed` with the reason naming the rule, and no
+revision. The critique-fails scenario of the golden set (T047) is the proof proper.
+
 **V12. Holds.** `POST /process/runs` with the same body again answers `200` with the run as held;
 ankka answers the run as it stands and calls no tool again. Five pieces of evidence, five claims and
 one belief revision, eleven acts, after the second send as after the first.
@@ -586,14 +600,29 @@ directory wins over the one the `process` module carries.
 the scripted reader quotes a passage of the document chosen from the scenario's number, so
 scenarios on one shared service do not meet each other's evidence, while two runs of one scenario
 do, as *evidence an earlier run recorded* needs. The number is the test JVM's scenario counter,
-which other suites running beside this one advance, so the passage has to be the number's own over
-thousands of scenarios, not its remainder: the first try, the first *n* mod 40 words, met itself in
-CI and *a run sent twice* found four pieces of evidence where it had written five.
+so the passage is the number's own over thousands of scenarios, not its remainder. What twice made
+*a run sent twice* find four pieces of evidence where it had written five in CI was not a shared
+passage but the act rows: a view, which lags the writes by a moment on a loaded runner, so a step
+that counts a run's acts waits for them as it waits for the run to end.
 
 **F-m. The seed suite's sources are repeats.** The launch example's two sources are the golden set's,
 which the service registers as it starts (F-k), so a seed file sent to a fresh service is answered
 `200` for those two and `201` for the rest; the suite expects exactly that. The same is true of
 anyone following *record reasoning* in the docs, which the docs tasks (T057) say.
+
+**F-n. The answers with acts nest the lower codec.** `WithActs[A]` is serialised by a codec made
+with the same configuration as the lower layer's (`Replies.codec`), so `answer` is the lower
+route's reply byte for byte without the process layer holding the lower layer's bytes; the
+contract's property is asserted by the golden set's scenarios against the lower routes.
+`/process/answers/run` applies `asOf` and `asRecordedBy` to the acts it lists, which are dated as
+their records; the run and its ending are shown whenever they were recorded.
+
+**F-o. The service without the process layer runs beside the graph fixture.** SC-008 asks every
+scenario of the belief layer and the market layer to pass with no process record held, and most of
+them read the graph. `NoProcessFixture` is a second service in the test JVM, built with
+`process = false`, publishing to the graph fixture's topic and reading its graph database through
+the one sink; the suites of `features/record/`, `features/explain/` and `features/market/` run
+again against it under their own prefixes.
 
 ## Measurements
 

@@ -13,7 +13,10 @@ import com.thinkmorestupidless.ankka.sdk.ComponentClient
 import reasoning.belief.BeliefLayer
 import reasoning.belief.application.{BeliefConfig, Clock, Recorder}
 import reasoning.graph.{GraphReader, Layer, Vocabulary}
-import reasoning.process.api.{ActsEndpoint, RunsEndpoint, RunStarter}
+import reasoning.belief.answers.BeliefAnswers
+import reasoning.market.answers.MarketAnswers
+import reasoning.process.answers.ProcessAnswers
+import reasoning.process.api.*
 import reasoning.process.application.*
 import reasoning.process.application.graph.ProcessGraph
 import reasoning.process.appraiser.{Appraiser, GoldenSet}
@@ -117,7 +120,7 @@ object ProcessLayer:
       config: ProcessConfig,
       agents: => AgentRuntime
   ): Seq[EndpointClients => HttpEndpoint] =
-    val _ = graph
+    val answers = ProcessAnswers(graph, BeliefAnswers(graph), MarketAnswers(graph))
     Seq(
       clients =>
         val records = recorder(clients, clock, belief)
@@ -129,5 +132,7 @@ object ProcessLayer:
           acl
         )
       ,
-      clients => ActsEndpoint(recorder(clients, clock, belief), clients.viewClient, acl)
+      clients => ActsEndpoint(recorder(clients, clock, belief), clients.viewClient, acl),
+      _ => ProcessAnswersEndpoint(answers, acl),
+      _ => ProcessMarketAnswersEndpoint(answers, acl)
     )
