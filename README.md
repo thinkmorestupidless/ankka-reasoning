@@ -3,6 +3,10 @@
   <img src="docs/assets/brand/ankka-reasoning-lockup-black.png" alt="ankka-reasoning" width="400">
 </picture>
 
+[![ci](https://github.com/thinkmorestupidless/ankka-reasoning/actions/workflows/ci.yml/badge.svg?event=pull_request)](https://github.com/thinkmorestupidless/ankka-reasoning/actions/workflows/ci.yml) [![license](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+
+[![java 21+](https://img.shields.io/badge/java-21%2B-007396?logo=openjdk&logoColor=white)](docs/get-started/run-locally.md) [![maven central](https://img.shields.io/maven-central/v/com.thinkmorestupidless/ankka-reasoning-graph_3?label=maven%20central&logo=apachemaven&logoColor=white)](https://central.sonatype.com/artifact/com.thinkmorestupidless/ankka-reasoning-graph_3) [![image](https://img.shields.io/badge/ghcr.io-ankka--reasoning-2496ED?logo=docker&logoColor=white)](https://github.com/thinkmorestupidless/ankka-reasoning/pkgs/container/ankka-reasoning)
+
 A reasoning graph on [ankka](https://github.com/thinkmorestupidless/ankka): a record of how beliefs
 form and change. Evidence is kept with where it came from, claims are derived from evidence,
 hypotheses compete to answer a question, and a belief is one holder's probability for one
