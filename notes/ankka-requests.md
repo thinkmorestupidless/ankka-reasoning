@@ -105,6 +105,19 @@ ask judgments, and runs started by a request, a schedule or a record. Specified 
 **Would remove.** Everything this repository would otherwise need to run a pattern. What stays here
 is the projection of runs into the graph and the tools that write reasoning records.
 
+### 19. A run's start answers the run as started (spec 002, V6)
+
+**Today.** `agents.runs.start` answers a first start with the run entity's state from before its
+`Started` event: `RunEntity.start` persists and then replies `currentState`, which is the empty
+record, so the snapshot has no blueprint, version, `startedBy` or `startedAt`. A caller that holds
+a record of the run from that answer, as this service does, holds nothing it can use. The way round
+here: `RunsEndpoint` starts the run and reads it back with `agents.runs.get`.
+
+**Asked.** `start` to reply with the state after the event (`thenReply(state => state)`), as a
+repeated start already does.
+
+**Would remove.** The read back after every start, and a trap for every service that starts runs.
+
 ## To ankka-flow
 
 ### 6. Ask whether a set of elements has been applied (R10)

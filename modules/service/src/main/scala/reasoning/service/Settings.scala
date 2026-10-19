@@ -4,6 +4,8 @@ import com.thinkmorestupidless.ankka.auth.oidc.OidcVerifier
 import com.typesafe.config.Config
 import reasoning.graph.GraphConnection
 
+import java.nio.file.{Path, Paths}
+
 /**
  * Everything the service reads from its configuration, read once at start.
  *
@@ -21,6 +23,10 @@ import reasoning.graph.GraphConnection
  * @param people
  *   the verifier of people's tokens, from ankka's `ANKKA_AUTH_*` variables; `None` when no issuer
  *   is listed, and a caller through the gateway is then refused
+ * @param appraiserHolders
+ *   the holders the appraiser may be run for, registered when the service starts
+ * @param goldenSet
+ *   a directory of golden set files that win over the ones the service carries; `None` for none
  */
 final case class Settings(
     graphTopic: String,
@@ -28,7 +34,9 @@ final case class Settings(
     excerptLimit: Int,
     waitLimitMaxMs: Long,
     stewards: Set[String],
-    people: Option[OidcVerifier]
+    people: Option[OidcVerifier],
+    appraiserHolders: Vector[String],
+    goldenSet: Option[Path]
 )
 
 object Settings:
@@ -56,5 +64,8 @@ object Settings:
       excerptLimit = config.getInt("excerpt-limit"),
       waitLimitMaxMs = config.getLong("wait-limit-max-ms"),
       stewards = config.getString("stewards").split(',').map(_.trim).filter(_.nonEmpty).toSet,
-      people = Writers.people(env)
+      people = Writers.people(env),
+      appraiserHolders =
+        config.getString("appraiser-holders").split(',').map(_.trim).filter(_.nonEmpty).toVector,
+      goldenSet = Option(config.getString("golden-set").trim).filter(_.nonEmpty).map(Paths.get(_))
     )

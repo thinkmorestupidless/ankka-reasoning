@@ -28,6 +28,36 @@ object ProcessRules:
         "limit" -> Ids.RunIdLimit.toString
       )
 
+  /** A run is started only of a blueprint the service carries. */
+  def blueprintNotHeld(blueprint: String, carried: Set[String]): Option[Refusal] =
+    if carried.contains(blueprint) then None
+    else
+      refusal(
+        "blueprint.not-held",
+        404,
+        s"The service carries no blueprint '$blueprint'.",
+        "blueprint" -> blueprint
+      )
+
+  def runIdHeldByAnother(run: String): Refusal =
+    Refusal(
+      "run.id.held-by-another",
+      409,
+      s"The run id '$run' is held by a run of a different blueprint or with a different input.",
+      Map("run" -> run)
+    )
+
+  /**
+   * The input of a run fits the blueprint's input shape; `names.field` is the first that does not.
+   */
+  def inputInvalid(field: String, problem: String): Refusal =
+    Refusal(
+      "run.input.invalid",
+      422,
+      s"The run's input does not fit the blueprint's input shape: $field $problem.",
+      Map("field" -> field)
+    )
+
   def runNotHeld(run: String, held: Option[Run]): Option[Refusal] =
     if held.isDefined then None
     else refusal("run.not-held", 422, s"No run '$run' is held.", "run" -> run)
@@ -86,6 +116,15 @@ object ProcessRules:
       422,
       "A rest is a claim's id, or a claim's id, '@' and a weight.",
       Map("rest" -> rest)
+    )
+
+  /** A run's revision rests only on claims its own holder stated. */
+  def restsOnOtherHolder(revision: String, claim: String, holder: String): Refusal =
+    Refusal(
+      "belief.rests-on.other-holder",
+      422,
+      "A belief revision a run writes rests only on claims stated by its holder.",
+      Map("revision" -> revision, "claim" -> claim, "holder" -> holder)
     )
 
   def toolCalledInNoRun(tool: String): Refusal =

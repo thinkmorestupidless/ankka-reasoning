@@ -15,6 +15,7 @@ import reasoning.belief.application.{BeliefConfig, Clock}
 import reasoning.graph.{GraphReader, Neo4jGraph, Vocabulary}
 import reasoning.market.MarketLayer
 import reasoning.process.{ProcessConfig, ProcessLayer}
+import reasoning.process.tools.RunReads
 
 /**
  * The whole service definition.
@@ -50,8 +51,10 @@ object ReasoningService:
 
   /** What the process layer is handed. */
   def processConfig(settings: Settings): ProcessConfig =
-    val _ = settings
-    ProcessConfig()
+    ProcessConfig(
+      appraiserHolders = settings.appraiserHolders,
+      goldenSetDir = settings.goldenSet
+    )
 
   /**
    * Every component the service hosts.
@@ -87,31 +90,53 @@ object ReasoningService:
   def agents(
       settings: Settings,
       model: ModelProvider,
-      judgments: JudgmentProvider
+      judgments: JudgmentProvider,
+      clock: Clock = Clock.system
   ): AgentRuntime =
-    AgentRuntime
+    // The tools read ankka's runs through the runtime they are part of, once it has started.
+    lazy val runtime: AgentRuntime = AgentRuntime
       .withDefaultModel(model)
       .withJudgments(judgments)
-      .withBlueprints(ProcessLayer.registry(_, processConfig(settings)))
+      .withBlueprints(
+        ProcessLayer.registry(
+          _,
+          clock,
+          beliefConfig(settings),
+          processConfig(settings),
+          RunReads.of(runtime)
+        )
+      )
+    runtime
 
   /** The graph database the answers read, or the reader that says there is none. */
   def graph(settings: Settings): GraphReader = settings.graph.fold(GraphReader.none)(Neo4jGraph(_))
 
-  /** Every endpoint the service serves. */
+  /**
+   * Every endpoint the service serves.
+   *
+   * @param agents
+   *   the runtime that hosts the blueprints, which the process layer's routes start runs on; with
+   *   none, the process layer's routes are not served
+   */
   def endpoints(
       settings: Settings,
       clock: Clock,
       graph: GraphReader,
       publishing: Boolean,
       markets: Boolean = true,
-      process: Boolean = true
+      process: Boolean = true,
+      agents: Option[AgentRuntime] = None
   ): Seq[EndpointClients => HttpEndpoint] =
     val config     = beliefConfig(settings, markets)
     val writers    = Writers.acl(settings.people)
     val processing = markets && process
     val layers = BeliefLayer.endpoints(clock, config, graph, writers) ++
       (if markets then MarketLayer.endpoints(clock, config, graph, writers) else Seq.empty) ++
-      (if processing then ProcessLayer.endpoints(clock, config, graph, writers) else Seq.empty)
+      (if processing then
+         agents.toSeq.flatMap(runtime =>
+           ProcessLayer.endpoints(clock, config, graph, writers, processConfig(settings), runtime)
+         )
+       else Seq.empty)
     layers :+ { (clients: EndpointClients) =>
       val recorder = BeliefLayer.recorder(clients, clock, config)
       val market   = MarketLayer.recorder(clients, clock, config)
@@ -134,10 +159,13 @@ object ReasoningService:
 
   /** The extensions of a deployed service, in the order they start. */
   def extensions(settings: Settings, graph: GraphReader): Seq[RuntimeExtension] =
+    val runtime = agents(settings, Providers.model(), Providers.judgments())
     Seq(
       ProjectionRuntime.fromEnv(),
-      agents(settings, Providers.model(), Providers.judgments()),
-      HttpServer.of(endpoints(settings, Clock.system, graph, publishing())*)
+      runtime,
+      HttpServer.of(
+        endpoints(settings, Clock.system, graph, publishing(), agents = Some(runtime))*
+      )
     )
 
 @main def run(): Unit =

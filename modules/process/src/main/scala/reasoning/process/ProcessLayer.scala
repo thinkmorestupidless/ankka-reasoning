@@ -1,14 +1,23 @@
 package reasoning.process
 
-import com.thinkmorestupidless.ankka.agent.blueprint.{BlueprintContext, BlueprintRegistry}
+import com.thinkmorestupidless.ankka.agent.{AgentRuntime, Json}
+import com.thinkmorestupidless.ankka.agent.blueprint.{
+  BlueprintContext,
+  BlueprintRegistry,
+  RunSnapshot,
+  Shape
+}
 import com.thinkmorestupidless.ankka.core.ComponentDescriptor
 import com.thinkmorestupidless.ankka.http.{Acl, EndpointClients, HttpEndpoint}
 import com.thinkmorestupidless.ankka.sdk.ComponentClient
 import reasoning.belief.BeliefLayer
 import reasoning.belief.application.{BeliefConfig, Clock, Recorder}
 import reasoning.graph.{GraphReader, Layer, Vocabulary}
+import reasoning.process.api.{ActsEndpoint, RunsEndpoint, RunStarter}
 import reasoning.process.application.*
 import reasoning.process.application.graph.ProcessGraph
+import reasoning.process.appraiser.{Appraiser, GoldenSet}
+import reasoning.process.tools.{RunReads, RunResolver, Tools}
 
 import java.nio.file.Path
 
@@ -70,17 +79,55 @@ object ProcessLayer:
   /** The layer's graph consumers, publishing to `topic`. */
   def graphComponents(topic: String): Seq[ComponentDescriptor] = ProcessGraph.On(topic).descriptors
 
-  /** What the service's blueprints may name. None is carried yet. */
-  def registry(context: BlueprintContext, config: ProcessConfig): BlueprintRegistry =
-    val _ = (context, config)
-    BlueprintRegistry.empty
+  /**
+   * What the service's blueprints may name: the three tools, the appraiser's handlers and question,
+   * and the appraiser itself at its first instruction set. Built once as the service starts, when
+   * it also registers the appraiser's holders and the golden set's sources.
+   *
+   * @param reads
+   *   ankka's records of runs and versions, read through the runtime that is starting
+   */
+  def registry(
+      context: BlueprintContext,
+      clock: Clock,
+      belief: BeliefConfig,
+      config: ProcessConfig,
+      reads: RunReads
+  ): BlueprintRegistry =
+    val records   = recorder(context.componentClient, clock, belief)
+    val goldenSet = GoldenSet(config.goldenSetDir)
+    Appraiser.prepare(records, goldenSet, config)
+    Appraiser.registry(
+      Tools(RunResolver(reads, records, config.serviceWriter), records, goldenSet),
+      goldenSet
+    )
 
-  /** Every endpoint the layer serves, behind the ACL the service gives it. None yet. */
+  /** The blueprints the service carries, by name, and how a run of one is started. */
+  def starter(agents: => AgentRuntime): RunStarter = new RunStarter:
+    def carried: Map[String, Shape] = Map(Appraiser.Name -> Appraiser.inputShape)
+    def start(blueprint: String, input: Json, runId: String, startedBy: String): RunSnapshot =
+      agents.runs.start(blueprint, input, runId, startedBy)
+
+  /** Every endpoint the layer serves, behind the ACL the service gives it. */
   def endpoints(
       clock: Clock,
       belief: BeliefConfig,
       graph: GraphReader,
-      acl: Acl
+      acl: Acl,
+      config: ProcessConfig,
+      agents: => AgentRuntime
   ): Seq[EndpointClients => HttpEndpoint] =
-    val _ = (clock, belief, graph, acl)
-    Seq.empty
+    val _ = graph
+    Seq(
+      clients =>
+        val records = recorder(clients, clock, belief)
+        RunsEndpoint(
+          records,
+          clients.viewClient,
+          starter(agents),
+          RunResolver(RunReads.of(agents), records, config.serviceWriter),
+          acl
+        )
+      ,
+      clients => ActsEndpoint(recorder(clients, clock, belief), clients.viewClient, acl)
+    )

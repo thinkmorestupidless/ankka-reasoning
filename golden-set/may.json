@@ -1,0 +1,77 @@
+{
+  "name": "may",
+  "month": "2026-05",
+  "probability": { "v1": 0.35, "v2": 0.40 },
+  "documents": [
+    {
+      "id": "filing",
+      "kind": "a filing",
+      "source": "company-x-filings",
+      "locator": "10-Q 2026 Q1, p. 14",
+      "publishedAt": "2026-05-04T07:00:00Z",
+      "text": "Company X Holdings quarterly report for the period ending 31 March 2026, section on products in development. Product Y remains in the pre-approval phase. During the quarter the company completed the second of three validation studies required by the regulator and submitted the consolidated dossier on 27 February. The regulator has acknowledged receipt and has not yet scheduled its review committee. Management continues to expect a decision in the second half of the year but notes that the timing of regulatory review is outside the company's control and that any launch of Product Y is contingent on approval, on the completion of manufacturing scale-up at the Tarnow facility, and on the availability of the sensor component supplied by Orrin Components. The company has not committed to a launch date and does not expect to do so before a decision is received. Capital expenditure on Product Y tooling was 14.2 million in the quarter, in line with plan. Inventory of finished units is nil. Should approval be delayed beyond the third quarter, the company would expect no revenue from Product Y in the current financial year and would review the carrying value of the related tooling. Forward-looking statements in this section are subject to the risk factors set out on pages 31 to 36.",
+      "expectedReading": {
+        "hypothesis": "launch/yes",
+        "stance": "contradicts",
+        "statement": "approval is pending and the launch date is uncertain",
+        "weight": { "v1": 0.25, "v2": 0.3 }
+      }
+    },
+    {
+      "id": "notice",
+      "kind": "a regulator's notice",
+      "source": "regulator",
+      "locator": "Notice 1142 of 2026",
+      "publishedAt": "2026-05-08T10:00:00Z",
+      "text": "Office of Product Conformity, public notice 1142 of 2026. The Office has received an application from Company X Holdings for conformity assessment of a device designated Product Y under schedule 4 of the Conformity Regulations. The application was lodged on 27 February 2026 and was found complete on 30 April 2026 after the applicant supplied additional data on long-term sensor drift requested by the assessment panel. Under the Office's published service standard, a complete schedule 4 application is assessed within 180 days of the completeness date, which in this case gives an indicative decision date no later than 27 October 2026. The Office notes that the service standard is a maximum and that assessments are frequently concluded sooner, but that applications involving a novel sensing method, as this one does, have in the past required a second round of questions. Interested parties may make written representations to the Office within 28 days of this notice. The Office makes no comment on the likely outcome of any assessment while it is in progress. Enquiries to the registry at the address below. This notice is published in accordance with section 12 of the Regulations and will be updated when the assessment concludes.",
+      "expectedReading": {
+        "hypothesis": "launch/yes",
+        "stance": "contradicts",
+        "statement": "the regulator's decision may take until late October",
+        "weight": { "v1": 0.25, "v2": 0.3 }
+      }
+    },
+    {
+      "id": "trade-press",
+      "kind": "a trade-press piece",
+      "source": "trade-press",
+      "locator": "Devices Weekly, 12 May 2026, Launch watch",
+      "publishedAt": "2026-05-12T06:00:00Z",
+      "text": "Launch watch: Company X lines up Product Y for the autumn, by our industry desk. Company X has begun briefing distributors on Product Y, three people familiar with the discussions told Devices Weekly this week, in what two of them described as the clearest sign yet that the company intends to ship the device this year. The briefings, held at the company's Tarnow site in late April, covered pricing bands, warranty terms and the training that installers will need, and one attendee said the company's commercial team was working to a plan that assumed first shipments in October. Company X declined to comment on the briefings and referred us to its quarterly report, which says a launch depends on regulatory approval. People at two distributors cautioned that the plan they were shown was explicitly conditional and that the company had shown similar plans for an earlier product that slipped by a year. Still, the scale of the preparation, including a printed installer manual and a dedicated support line, suggested to our sources that the company is treating approval as likely rather than possible. Devices Weekly will follow the regulator's notice board for the assessment's progress. Analysts we spoke to were split on whether October is achievable.",
+      "expectedReading": {
+        "hypothesis": "launch/yes",
+        "stance": "supports",
+        "statement": "distributors are being briefed for an autumn launch",
+        "weight": { "v1": 0.2, "v2": 0.3 }
+      }
+    },
+    {
+      "id": "analyst",
+      "kind": "an analyst note",
+      "source": "analyst-notes",
+      "locator": "Halvard Research, Company X initiation, 15 May 2026, p. 3",
+      "publishedAt": "2026-05-15T08:00:00Z",
+      "text": "Halvard Research, initiation of coverage on Company X Holdings, Product Y timing. We model Product Y revenue beginning in the first quarter of next year, not this year, and we think the consensus view of an autumn launch is too hopeful. Our reasoning is in three parts. First, the regulator's completeness date of 30 April puts the outer bound of the assessment at the end of October, and the Office's record on novel sensing methods is that about half go to a second round of questions, each of which has added two to four months. Second, even on approval, the Tarnow facility's scale-up is, on the company's own figures, running about six weeks behind its original plan, and finished inventory at the end of the quarter was nil. Third, Orrin Components, the sole supplier of the sensor, said on its own call that it expects to reach volume in the fourth quarter at the earliest. Put together, we see perhaps a one in three chance that units ship before the year's end, and we would treat a launch this year as upside to our numbers rather than the base case. We initiate at Hold with a price target of 42. Risks to our view include a faster assessment than the Office's record suggests and a decision by the company to launch from constrained inventory.",
+      "expectedReading": {
+        "hypothesis": "launch/yes",
+        "stance": "contradicts",
+        "statement": "an analyst models the launch next year, not this year",
+        "weight": { "v1": 0.15, "v2": 0.1 }
+      }
+    },
+    {
+      "id": "supplier-call",
+      "kind": "a supplier's earnings call",
+      "source": "supplier-calls",
+      "locator": "Orrin Components Q1 2026 earnings call, transcript, question 7",
+      "publishedAt": "2026-05-19T15:00:00Z",
+      "text": "Orrin Components first quarter 2026 earnings call, prepared remarks and questions, edited for clarity. Chief executive: on the sensing line, I will say that the ramp for our largest device customer is going better than we had planned. We had guided to volume in the fourth quarter and I am now comfortable saying we expect to be at volume in the third, with the first production lots already through qualification at the customer's site. That customer, as most of you know, is waiting on a regulatory decision, so the timing of their launch is theirs to announce and not ours. What I can say is that from our side, supply will not be the thing that holds them back. Analyst, question seven: can you quantify the volumes you are preparing for? Chief executive: we have tooled for a run rate that would support a launch in the second half of this year at the kind of volumes a first-year product would need, and we have the raw material commitments to go with it. If the decision came tomorrow we would be ready. Analyst: and if it slipped into next year? Chief executive: then we would carry some inventory, which we have planned for, and it would not change our guidance for the year.",
+      "expectedReading": {
+        "hypothesis": "launch/yes",
+        "stance": "supports",
+        "statement": "the sensor supplier will be at volume by the third quarter",
+        "weight": { "v1": 0.15, "v2": 0.2 }
+      }
+    }
+  ]
+}

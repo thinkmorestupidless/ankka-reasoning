@@ -1,6 +1,6 @@
 package reasoning.support
 
-import com.thinkmorestupidless.ankka.agent.TestModelProvider
+import com.thinkmorestupidless.ankka.agent.{AgentRuntime, TestModelProvider}
 import com.thinkmorestupidless.ankka.agent.judgment.TestJudgmentProvider
 import com.thinkmorestupidless.ankka.http.HttpServer
 import com.thinkmorestupidless.ankka.runtime.{InMemoryBroker, ProjectionRuntime}
@@ -11,6 +11,7 @@ import reasoning.belief.domain.Moment
 import reasoning.graph.GraphReader
 import reasoning.service.{ReasoningService, Settings}
 
+import java.nio.file.Paths
 import scala.concurrent.duration.DurationInt
 
 /**
@@ -31,7 +32,11 @@ object ServiceFixture:
   val settings: Settings =
     Settings
       .from(ConfigFactory.load())
-      .copy(stewards = Set(Http.writer(Steward)), people = Some(People.verifier))
+      .copy(
+        stewards = Set(Http.writer(Steward)),
+        people = Some(People.verifier),
+        goldenSet = Some(Paths.get("modules/service/src/test/resources/golden-set"))
+      )
 
   val broker: InMemoryBroker = InMemoryBroker()
 
@@ -43,17 +48,22 @@ object ServiceFixture:
   val model: TestModelProvider    = TestModelProvider()
   val judge: TestJudgmentProvider = TestJudgmentProvider()
 
+  /** ankka's agents, hosting the appraiser; a step reads a run or a version through it. */
+  lazy val agents: AgentRuntime = ReasoningService.agents(settings, model, judge, clock)
+
   private lazy val started: (AnkkaTestKit, HttpServer) =
     val server = HttpServer.at("127.0.0.1", 0)(
-      ReasoningService.endpoints(settings, clock, GraphReader.none, publishing = true)*
+      ReasoningService.endpoints(
+        settings,
+        clock,
+        GraphReader.none,
+        publishing = true,
+        agents = Some(agents)
+      )*
     )
     val kit = AnkkaTestKit.start(
       ReasoningService.components(settings, publishing = true, clock = clock),
-      Seq(
-        ProjectionRuntime.withBroker(broker, broker),
-        ReasoningService.agents(settings, model, judge),
-        server
-      ),
+      Seq(ProjectionRuntime.withBroker(broker, broker), agents, server),
       readyTimeout = 120.seconds
     )
     sys.addShutdownHook(kit.stop()): Unit

@@ -1,0 +1,49 @@
+{
+  "name": "june",
+  "month": "2026-06",
+  "probability": { "v1": 0.72, "v2": 0.66 },
+  "documents": [
+    {
+      "id": "approval",
+      "kind": "approval granted",
+      "source": "regulator",
+      "locator": "Notice 1187 of 2026",
+      "publishedAt": "2026-06-09T10:00:00Z",
+      "text": "Office of Product Conformity, public notice 1187 of 2026. The Office has concluded its assessment of the application by Company X Holdings for conformity of the device designated Product Y under schedule 4 of the Conformity Regulations, notice of which was given in notice 1142 of 2026. The assessment panel found that the device meets the essential requirements of the schedule, subject to the conditions set out in the annex to this notice, which concern the labelling of the sensing element and a post-market surveillance plan the applicant has agreed to. Approval is granted with effect from the date of this notice and is valid for five years. The Office records that the assessment was concluded in 40 days from the completeness date, well within the service standard, the panel having found the applicant's additional data on sensor drift sufficient to answer the questions it would otherwise have raised. The applicant may place the device on the market from the effective date. Conditions attached to this approval are enforceable under section 18 of the Regulations, and the Office may suspend the approval should the surveillance plan not be carried out. This notice will be entered in the public register of approved devices. Enquiries to the registry at the address below.",
+      "expectedReading": {
+        "hypothesis": "launch/yes",
+        "stance": "supports",
+        "statement": "the regulator has approved Product Y for sale",
+        "weight": { "v1": 0.3, "v2": 0.2 }
+      }
+    },
+    {
+      "id": "launch-date",
+      "kind": "a launch date announced",
+      "source": "company-x-filings",
+      "locator": "Press release, 16 June 2026",
+      "publishedAt": "2026-06-16T07:00:00Z",
+      "text": "Company X Holdings announces the launch date of Product Y. Following the grant of conformity approval by the Office of Product Conformity on 9 June, Company X today confirmed that Product Y will be available to customers from 5 October 2026 in its home market, with further markets to follow as local approvals are received. Pre-orders open on 1 September through the company's distributor network. First production lots have completed qualification at the Tarnow facility and the company expects to have inventory sufficient for launch demand by the end of August. The chief executive said the company was delighted by the speed of the assessment and grateful to the teams at Tarnow and at its supplier Orrin Components, whose sensing element is at the heart of the device. The company reiterated its guidance for the financial year, noting that Product Y revenue is now expected in the fourth quarter and that the earlier caution in its quarterly report, which assumed a later decision, no longer applies. Installer training begins in July. The company will host a product briefing for analysts and the press on 23 June. Forward-looking statements in this release are subject to the risk factors in the company's most recent quarterly report.",
+      "expectedReading": {
+        "hypothesis": "launch/yes",
+        "stance": "supports",
+        "statement": "Company X has set a launch date of 5 October",
+        "weight": { "v1": 0.24, "v2": 0.12 }
+      }
+    },
+    {
+      "id": "rumour",
+      "kind": "a contradicting rumour",
+      "source": "rumour-mill",
+      "locator": "Device Rumours forum, thread 88213, 20 June 2026",
+      "publishedAt": "2026-06-20T22:00:00Z",
+      "text": "Posted by tarnow_insider on the Device Rumours forum, thread 88213. I work near the plant and I am hearing from people on the line that the October date is not going to hold. Word is that a batch of the sensing elements failed an incoming inspection last week and the whole lot went back to the supplier, and that there is an argument going on about whether the problem is the parts or the test rig. Someone in the quality group apparently said in the canteen that if the next lot fails too they will have to tell the Office and that would mean the surveillance conditions kick in before the thing has even shipped. I have no documents for any of this, just what I am hearing, and the people I am hearing it from are not in management. Reply from mod_hex: usual reminder that this forum is not a news source and that tarnow_insider has posted plant gossip before that did not pan out, including the story about the second production line last year. Reply from tarnow_insider: fair, I am only passing on what I hear. Reply from quietwatcher: for what it is worth, the company's investor relations line said this afternoon that the launch date is unchanged. Thread locked by moderator pending anything verifiable.",
+      "expectedReading": {
+        "hypothesis": "launch/yes",
+        "stance": "contradicts",
+        "statement": "a forum rumour says a sensor batch failed inspection and the date may slip",
+        "weight": { "v1": 0.1, "v2": 0.0 }
+      }
+    }
+  ]
+}
