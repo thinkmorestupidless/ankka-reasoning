@@ -600,9 +600,10 @@ directory wins over the one the `process` module carries.
 the scripted reader quotes a passage of the document chosen from the scenario's number, so
 scenarios on one shared service do not meet each other's evidence, while two runs of one scenario
 do, as *evidence an earlier run recorded* needs. The number is the test JVM's scenario counter,
-which other suites running beside this one advance, so the passage has to be the number's own over
-thousands of scenarios, not its remainder: the first try, the first *n* mod 40 words, met itself in
-CI and *a run sent twice* found four pieces of evidence where it had written five.
+so the passage is the number's own over thousands of scenarios, not its remainder. What twice made
+*a run sent twice* find four pieces of evidence where it had written five in CI was not a shared
+passage but the act rows: a view, which lags the writes by a moment on a loaded runner, so a step
+that counts a run's acts waits for them as it waits for the run to end.
 
 **F-m. The seed suite's sources are repeats.** The launch example's two sources are the golden set's,
 which the service registers as it starts (F-k), so a seed file sent to a fresh service is answered

@@ -411,8 +411,11 @@ abstract class ProcessFeatureSuite(feature: String, graph: Boolean = false)
     "a run of the appraiser under the run id {string} that recorded five pieces of evidence and stated five claims"
   ) { (id: String) =>
     run(id = runId(id))
-    assertEquals(actsOf(w.notes("run"), "evidence").size, 5)
-    assertEquals(actsOf(w.notes("run"), "claim").size, 5)
+    // The rows the acts are listed from may lag the writes by a moment.
+    Eventually.eventually(60.seconds) {
+      assertEquals(actsOf(w.notes("run"), "evidence").size, 5)
+      assertEquals(actsOf(w.notes("run"), "claim").size, 5)
+    }
   }
 
   When("the run is sent again under the run id {string}") { (id: String) =>
@@ -423,7 +426,11 @@ abstract class ProcessFeatureSuite(feature: String, graph: Boolean = false)
   }
 
   Then("five pieces of evidence, five claims and one belief revision are held") { () =>
-    val all = acts(w.notes("run"))
+    val all = Eventually.eventually(60.seconds) {
+      val all = acts(w.notes("run"))
+      assertEquals(all.size, 11, all.map(_("record")).mkString(", "))
+      all
+    }
     assertEquals(all.count(_("record")("kind").str == "evidence"), 5)
     assertEquals(all.count(_("record")("kind").str == "claim"), 5)
     assertEquals(all.count(_("record")("kind").str == "revision"), 1)
