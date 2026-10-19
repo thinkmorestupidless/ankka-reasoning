@@ -36,46 +36,70 @@ abstract class GraphFeatureSuite(feature: String) extends FeatureSuite(feature):
   ): Vector[A] =
     GraphFixture.graph.read(query, parameters.toMap)(row)
 
-  /** Waits until the graph holds a record's node and every edge it stated. */
+  /**
+   * Waits until the graph holds a record's node and every edge it stated. A record the service
+   * copies from ankka's own, a blueprint version or a run, follows ankka's event by a moment, so a
+   * record not yet held is asked for again for a while.
+   */
   protected def caughtUp(kind: String, id: String): Unit =
-    val answer = http.post("/graph/wait", Obj("kind" -> kind, "id" -> id, "limitMs" -> 30000))
-    assertEquals(answer.status, 200, answer.body)
+    val answer = Eventually.eventually(30.seconds) {
+      val answer =
+        http.post("/graph/wait", Obj("kind" -> kind, "id" -> id, "limitMs" -> 30000))
+      assertEquals(answer.status, 200, answer.body)
+      answer
+    }
     assert(
       answer.json("caughtUp").bool,
       s"the graph did not catch up with $kind '$id': ${answer.body}\n${GraphFixture.sinkLogs}"
     )
 
-  /** The records of the launch example, by kind. */
-  protected def exampleRecords: Vector[(String, String)] = Vector(
-    "question" -> example.question,
-    "holder"   -> example.holder,
-    "source"   -> example.filings,
-    "source"   -> example.regulator,
-    "evidence" -> example.filing,
-    "evidence" -> example.notice,
-    "claim"    -> example.pending,
-    "claim"    -> example.barrierGone,
-    "revision" -> example.first,
-    "revision" -> example.second
-  )
+  /**
+   * The nodes a scenario made beside the launch example's, by id, for a snapshot of the graph to
+   * take in; a suite of a higher layer names its own.
+   */
+  protected def extraNodeIds: Vector[String] = Vector.empty
+
+  /** What a scenario did before the graph is rebuilt, for a suite to compare with after. */
+  protected def beforeRebuild(): Unit = ()
+
+  /** Every node of this scenario, by id: the launch example's when it recorded one, and its own. */
+  protected def scenarioNodeIds: Vector[String] = exampleNodes.map(_._1) ++ extraNodeIds
+
+  /** The records of the launch example, by kind; none when the scenario recorded no example. */
+  protected def exampleRecords: Vector[(String, String)] = if example == null then Vector.empty
+  else
+    Vector(
+      "question" -> example.question,
+      "holder"   -> example.holder,
+      "source"   -> example.filings,
+      "source"   -> example.regulator,
+      "evidence" -> example.filing,
+      "evidence" -> example.notice,
+      "claim"    -> example.pending,
+      "claim"    -> example.barrierGone,
+      "revision" -> example.first,
+      "revision" -> example.second
+    )
 
   /**
    * The node ids the launch example should have, with the label of each, as the vocabulary says.
    */
-  protected def exampleNodes: Vector[(String, String)] = Vector(
-    s"question:${example.question}" -> "Question",
-    s"hypothesis:${example.yes}"    -> "Hypothesis",
-    s"hypothesis:${example.no}"     -> "Hypothesis",
-    s"holder:${example.holder}"     -> "Holder",
-    s"source:${example.filings}"    -> "Source",
-    s"source:${example.regulator}"  -> "Source",
-    s"evidence:${example.filing}"   -> "Evidence",
-    s"evidence:${example.notice}"   -> "Evidence",
-    s"claim:${example.pending}"     -> "Claim",
-    s"claim:${example.barrierGone}" -> "Claim",
-    s"revision:${example.first}"    -> "BeliefRevision",
-    s"revision:${example.second}"   -> "BeliefRevision"
-  )
+  protected def exampleNodes: Vector[(String, String)] = if example == null then Vector.empty
+  else
+    Vector(
+      s"question:${example.question}" -> "Question",
+      s"hypothesis:${example.yes}"    -> "Hypothesis",
+      s"hypothesis:${example.no}"     -> "Hypothesis",
+      s"holder:${example.holder}"     -> "Holder",
+      s"source:${example.filings}"    -> "Source",
+      s"source:${example.regulator}"  -> "Source",
+      s"evidence:${example.filing}"   -> "Evidence",
+      s"evidence:${example.notice}"   -> "Evidence",
+      s"claim:${example.pending}"     -> "Claim",
+      s"claim:${example.barrierGone}" -> "Claim",
+      s"revision:${example.first}"    -> "BeliefRevision",
+      s"revision:${example.second}"   -> "BeliefRevision"
+    )
 
   /** The edges the launch example stated: type, from, to. */
   protected def exampleEdges: Vector[(String, String, String)] =
@@ -112,7 +136,7 @@ abstract class GraphFeatureSuite(feature: String) extends FeatureSuite(feature):
 
   /** Every node of this scenario and every edge between them, as the graph has them now. */
   protected def snapshot(): (Set[String], Set[String]) =
-    val ids = exampleNodes.map(_._1)
+    val ids = scenarioNodeIds
     val nodes = graphRows(
       "MATCH (n:Element) WHERE n.id IN $ids RETURN n.id AS id, labels(n) AS labels, properties(n) AS properties",
       "ids" -> ids
@@ -283,11 +307,12 @@ abstract class GraphFeatureSuite(feature: String) extends FeatureSuite(feature):
     w.notes("nodes") = nodes.toVector.sorted.mkString("\n")
     w.notes("edges") = edges.toVector.sorted.mkString("\n")
     w.notes("topic") = GraphFixture.topicEnd().toString
+    beforeRebuild()
     GraphFixture.stopSink()
     GraphFixture.emptyGraph()
     assertEquals(snapshot()._1, Set.empty[String], "the graph database was not emptied")
     GraphFixture.startSink()
-    exampleRecords.foreach(caughtUp(_, _))
+    (exampleRecords ++ w.published).foreach(caughtUp(_, _))
   }
 
   Then("the graph is as it was") { () =>
