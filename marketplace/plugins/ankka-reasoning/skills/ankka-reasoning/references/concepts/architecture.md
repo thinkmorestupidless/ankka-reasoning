@@ -5,11 +5,11 @@
 Source: https://reasoning.ankka.cloud/concepts/architecture/
 ankka-reasoning is one ankka service with three parts: records, graph consumers and answers. A writer
 sends a record; the service checks it and keeps it; the record is published to a Kafka topic as a node
-and its edges; ankka-flow's merge sink copies the topic into Neo4j; and a reader's question is answered
+and its edges; ankka's graph sink copies the topic into Neo4j; and a reader's question is answered
 by walking that graph. The write never waits for the graph, and the graph is never written by the
 service.
 
-![How ankka-reasoning works. Writers, a person, a script or a test, send records to the ankka-reasoning service, which runs in an ankka project. Inside the service, Records holds one entity per record, never edited, and checks every rule against the service's own records; every record is kept in the service's Postgres database. Each change goes to the graph consumers, one per kind of record, which turn each record into a node and each link it stated into an edge and publish them as graph deltas to a compacted delta topic in Kafka under the contract ankka.graph-delta.v1. An ankka-flow pipeline that is the built-in Neo4j merge sink alone reads the topic and merges each delta into the graph database, Neo4j, which is a copy that can be emptied and rebuilt from the topic alone. Readers ask the service's Answers, which query the graph database, read only, and reply with records only. A write never waits for the graph.](../assets/diagrams/architecture.svg)
+![How ankka-reasoning works. Writers, a person, a script or a test, send records to the ankka-reasoning service, which runs in an ankka project. Inside the service, Records holds one entity per record, never edited, and checks every rule against the service's own records; every record is kept in the service's Postgres database. Each change goes to the graph consumers, one per kind of record, which turn each record into a node and each link it stated into an edge and publish them as graph deltas to a compacted delta topic in Kafka under the contract ankka.graph-delta.v1. The graph sink, a second service in the same project that runs ankka's graph sink over ankka-contrib's Neo4j store, reads the topic and merges each delta into the graph database, Neo4j, which is a copy that can be emptied and rebuilt from the topic alone. Readers ask the service's Answers, which query the graph database, read only, and reply with records only. A write never waits for the graph.](../assets/diagrams/architecture.svg)
 
 ## Records: where the truth is
 
@@ -53,11 +53,11 @@ error in a unit test and never reaches the topic.
 
 ## The topic and the sink: the graph is a copy
 
-The deltas go to one compacted Kafka topic, `reasoning-graph`, keyed by element. An
-[ankka-flow](https://flow.ankka.cloud/) pipeline that is the built-in
-[Neo4j merge sink](https://flow.ankka.cloud/reference/neo4j-merge-sink/) and nothing else reads the
-topic and merges each delta into Neo4j, replacing a node's properties whole and passing over a delta
-older than what the graph holds.
+The deltas go to one compacted Kafka topic, `reasoning-graph`, keyed by element. ankka's
+[graph sink](https://docs.ankka.cloud/deploy/graph-sink/), deployed as a service of its own from
+ankka-contrib's image `ghcr.io/thinkmorestupidless/ankka-graph-sink-neo4j`, reads the topic and
+merges each delta into Neo4j, replacing a node's properties whole and passing over a delta older than
+what the graph holds. It keeps no state of its own: the topic is where it starts from.
 
 The graph database holds nothing the topic does not. It can be emptied and filled again from the
 topic alone, with the service not involved, and every answer is the same afterwards.

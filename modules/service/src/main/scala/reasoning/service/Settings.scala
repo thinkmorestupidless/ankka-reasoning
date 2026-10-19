@@ -1,5 +1,6 @@
 package reasoning.service
 
+import com.thinkmorestupidless.ankka.auth.oidc.OidcVerifier
 import com.typesafe.config.Config
 import reasoning.graph.GraphConnection
 
@@ -17,19 +18,25 @@ import reasoning.graph.GraphConnection
  *   the longest a `/graph/wait` may be asked to wait
  * @param stewards
  *   writers who may withdraw the text of any record
+ * @param people
+ *   the verifier of people's tokens, from ankka's `ANKKA_AUTH_*` variables; `None` when no issuer
+ *   is listed, and a caller through the gateway is then refused
  */
 final case class Settings(
     graphTopic: String,
     graph: Option[GraphConnection],
     excerptLimit: Int,
     waitLimitMaxMs: Long,
-    stewards: Set[String]
+    stewards: Set[String],
+    people: Option[OidcVerifier]
 )
 
 object Settings:
 
-  /** Reads the `reasoning` block of a loaded configuration. */
-  def from(root: Config): Settings =
+  /**
+   * Reads the `reasoning` block of a loaded configuration, and the issuers from the environment.
+   */
+  def from(root: Config, env: Map[String, String] = sys.env): Settings =
     val config = root.getConfig("reasoning")
     val uri    = config.getString("neo4j.uri").trim
     Settings(
@@ -48,5 +55,6 @@ object Settings:
       ,
       excerptLimit = config.getInt("excerpt-limit"),
       waitLimitMaxMs = config.getLong("wait-limit-max-ms"),
-      stewards = config.getString("stewards").split(',').map(_.trim).filter(_.nonEmpty).toSet
+      stewards = config.getString("stewards").split(',').map(_.trim).filter(_.nonEmpty).toSet,
+      people = Writers.people(env)
     )

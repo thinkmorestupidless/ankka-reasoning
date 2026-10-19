@@ -6,8 +6,8 @@ import java.util.concurrent.{ExecutionException, Executors, TimeUnit, TimeoutExc
 import scala.jdk.CollectionConverters.*
 
 /**
- * The graph database, read over Bolt. The service never writes to it and creates nothing in it:
- * ankka-flow's merge sink is its only writer.
+ * The graph database, read over Bolt. The service never writes to it and creates nothing in it: the
+ * graph sink is its only writer.
  *
  * A read that gets no answer within `answerWithin` fails as unavailable, so a database that has
  * stopped answering costs a reader a bounded wait and never a write anything at all.

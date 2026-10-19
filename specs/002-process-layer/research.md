@@ -451,7 +451,44 @@ outcome written beside it.
 
 ## Found during implementation
 
-*(written as the tasks are done)*
+**V1. Holds, at `0.12.0`.** ankka tagged `v0.12.0` on 2026-10-14 with blueprints merged; every
+module the build names is on Maven Central at it, `ankka-agent` and `ankka-auth-oidc` among them, so
+the build never needed `-Dankka.version`. The move from `0.10.0` compiled with nothing changed but two
+matches 0.12.0's enums made inexhaustive: `ErrorCode` gained `WorkflowFailed` and `NotHome`, mapped
+to `424` and `421` as ankka's own HTTP layer maps them, and `Caller` gained `Machine` (below).
+
+**V2. Holds.** `ankka-graph-sink-neo4j:0.1.0` is pulled with no credential. `SinkSmokeSuite`,
+`PublicationFeatures`, `WithdrawalFeatures` and `CompactionErasureSuite` pass against it unchanged
+(20 tests): the store writes `Element`, `id`, `_version`, `_deleted` and placeholders at `-1` as the
+sidecar did, and a hand-written delta with no CloudEvents headers is applied, so `sinkHasDrained` and
+`SinkOwn` stay as they were. The fixture sets `ANKKA_KAFKA_BOOTSTRAP_SERVERS` on the container; in a
+cluster the platform gives it to every service with components, so the descriptor does not.
+
+**V3. Holds.** On a laptop, `just up`, the service, `just seed launch-example` (12 nodes, 18 edges),
+then `just rebuild`: the graph emptied, the sink started at version 2 and the graph was whole again
+within 3 s, with `/answers/belief` byte for byte the same. The version is kept in `.env`.
+
+**F-a. The contrib image is `linux/amd64` only.** On Apple silicon Docker runs it under emulation and
+says so on start; the suites and the compose stack work, slower to start. A request to ankka-contrib
+for a multi-architecture image.
+
+**F-b. A caller 0.12.0 can name that R5 did not list: a machine registered on an organization**
+(`Caller.Machine`, ankka feature 040), which arrives through the gateway with a token the control
+plane issued and the platform verified. It is the writer `machine:<organization>/<name>`, ankka's own
+form for it, beside `service:` and `person:`; before 0.12.0 the same request was the gateway and was
+refused. A holder's list of writers still decides what it may write as anyone.
+
+**V14. Holds.** `GherkinSuite` takes one feature file; `FeatureSuite.directoryOf` and
+`target/feature-suites` are gone. A gateway caller with a token from an issuer in `ANKKA_AUTH_ISSUERS`
+is `person:<subject>@<issuer name>` through `ankka-auth-oidc`'s own verifier; with no issuer listed,
+no token or a bad one it is refused with `401`; a malformed list stops the service starting.
+`WritersSuite` proves each against an issuer in the test JVM whose key is handed to the verifier.
+
+**V10. Holds.** One Postgres container served both the service fixture's kit and the graph
+fixture's in one test JVM: the kit of 0.12.0 shares it. The fixtures stay shared for speed.
+
+**The release page** attaches `ankka-reasoning-<version>-graph-sink.json` in place of the blueprint;
+`deployDescriptors` renders both descriptors.
 
 ## Measurements
 

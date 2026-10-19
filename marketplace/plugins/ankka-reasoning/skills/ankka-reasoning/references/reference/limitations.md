@@ -26,11 +26,10 @@ deliberate. Each entry says how the system behaves today, so a reader can plan r
 
 ## What is unproven
 
-- **It has been deployed to a local cluster only.** The steps on
-  [Deploy on ankka](../deploy/deploy-on-ankka.md) were run against a kind installation of ankka
-  and ankka-flow on a laptop, with release 0.1.1. No cloud installation has run it. Everything else
-  in this documentation was run on a laptop, with Postgres, Kafka, Neo4j and the merge sink in
-  containers.
+- **The deployment on a cluster is unproven.** The steps on
+  [Deploy on ankka](../deploy/deploy-on-ankka.md), the graph sink as a service of the project and its
+  descriptor, have not been run on any installation, local or cloud. Everything else in this
+  documentation was run on a laptop, with Postgres, Kafka, Neo4j and the graph sink in containers.
 - **Time to the graph is measured on a laptop only.** Under a burst of 555 writes, nine in ten
   records were in the graph within 3.8 seconds of their `201` and the slowest took 4.4. The floor
   is a poll: the service asks its database what has changed once a second, and a record cannot
@@ -38,9 +37,10 @@ deliberate. Each entry says how the system behaves today, so a reader can plan r
 
 ## Who can write
 
-- **A person's token is not verified.** A caller through the gateway is answered `401`, because the
-  ankka release the service is built on, `0.10.0`, has no published verifier for one. A writer is
-  another ankka service, named by its certificate as `service:<project>/<name>`, or `local`.
+- **A person needs a token from an issuer the service lists.** A caller through the gateway is a
+  writer only with a token an issuer in `ANKKA_AUTH_ISSUERS` signed; a service that lists none
+  answers every such caller `401`. A person's token has not been tried through an installation's
+  gateway; it is verified in the service's own suites against an issuer of their own.
 - **Outside a cluster every caller is `local`.** "Speaks for" therefore refuses nobody on a
   laptop: every caller is the same writer. That is for a laptop only.
 - **A holder's writers are added and never removed.** There is no route that takes a writer away
@@ -76,7 +76,8 @@ deliberate. Each entry says how the system behaves today, so a reader can plan r
   excerpt.
 - **Withdrawn text is not gone from everywhere at once.** It leaves the service's own row when the
   withdrawal is accepted and the graph database when the sink applies the new delta. The earlier
-  delta stays on the topic until the broker compacts it, which the pipeline bounds at one day.
+  delta stays on the topic until the broker compacts it, which a topic declared with
+  `max.compaction.lag.ms` of one day bounds at one day.
 - **Backups are not reached.** A backup of the database or the broker taken before the withdrawal
   still holds the text, and so does Postgres's own storage until its next vacuum of the row,
   which no query can read. A deployment with a deadline for erasure sets its backup retention to
@@ -106,11 +107,10 @@ deliberate. Each entry says how the system behaves today, so a reader can plan r
 
 ## Running it
 
-- **The merge sink's image has to be built by hand.**
-  `ghcr.io/thinkmorestupidless/ankka-flow-sidecar:0.3.0` cannot be pulled without a credential.
-  Until it can, build it from ankka-flow's `v0.3.0` tag and tag it with that name, as
-  [Run it on your machine](../get-started/run-locally.md) describes.
+- **The graph sink's image is built for `linux/amd64` only.**
+  `ghcr.io/thinkmorestupidless/ankka-graph-sink-neo4j:0.1.0` runs on Apple silicon under Docker's
+  emulation, more slowly than it would natively.
 - **One graph database, and the service only reads it.** The service never writes to the graph
-  database and creates nothing in it; ankka-flow's merge sink is its only writer. Neo4j 5.26 or
-  later is what it is tested against.
+  database and creates nothing in it; the graph sink is its only writer. Neo4j 5.26 or later is what
+  it is tested against.
 - **A setting is read once at start.** Changing one is a restart.

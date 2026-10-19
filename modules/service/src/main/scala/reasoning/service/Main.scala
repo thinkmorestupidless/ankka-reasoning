@@ -69,9 +69,10 @@ object ReasoningService:
       publishing: Boolean,
       markets: Boolean = true
   ): Seq[EndpointClients => HttpEndpoint] =
-    val config = beliefConfig(settings, markets)
-    val layers = BeliefLayer.endpoints(clock, config, graph, Writers.acl) ++
-      (if markets then MarketLayer.endpoints(clock, config, graph, Writers.acl) else Seq.empty)
+    val config  = beliefConfig(settings, markets)
+    val writers = Writers.acl(settings.people)
+    val layers = BeliefLayer.endpoints(clock, config, graph, writers) ++
+      (if markets then MarketLayer.endpoints(clock, config, graph, writers) else Seq.empty)
     layers :+ { (clients: EndpointClients) =>
       val recorder = BeliefLayer.recorder(clients, clock, config)
       val market   = MarketLayer.recorder(clients, clock, config)
@@ -81,7 +82,7 @@ object ReasoningService:
         Seq(recorder.published) ++ (if markets then Seq(market.published) else Seq.empty),
         publishing,
         settings.waitLimitMaxMs,
-        Writers.acl
+        writers
       )
     }
 

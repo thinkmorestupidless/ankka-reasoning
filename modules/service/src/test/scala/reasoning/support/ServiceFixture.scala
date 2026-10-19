@@ -27,7 +27,9 @@ object ServiceFixture:
   val Steward = "steward"
 
   val settings: Settings =
-    Settings.from(ConfigFactory.load()).copy(stewards = Set(Http.writer(Steward)))
+    Settings
+      .from(ConfigFactory.load())
+      .copy(stewards = Set(Http.writer(Steward)), people = Some(People.verifier))
 
   val broker: InMemoryBroker = InMemoryBroker()
 

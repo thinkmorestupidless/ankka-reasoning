@@ -5,9 +5,9 @@
 Source: https://reasoning.ankka.cloud/reference/graph-vocabulary/
 The vocabulary is the list of every kind of node and edge the service publishes. A reader of the
 graph database needs this page and nothing else: nothing is in the graph that is not named here.
-The service publishes each element as an `ankka.graph-delta.v1` delta on its delta topic, and
-[ankka-flow](https://flow.ankka.cloud/)'s merge sink writes it to the graph database. The same list
-is served as JSON by `GET /graph/vocabulary`, described on the [HTTP API](http-api.md) page.
+The service publishes each element as an `ankka.graph-delta.v1` delta on its delta topic, and ankka's
+[graph sink](https://docs.ankka.cloud/deploy/graph-sink/) writes it to the graph database. The same
+list is served as JSON by `GET /graph/vocabulary`, described on the [HTTP API](http-api.md) page.
 
 ## What holds for every element
 

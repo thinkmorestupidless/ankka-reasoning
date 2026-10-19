@@ -170,4 +170,9 @@ Proves: US4, each run once. SC-007's nine in ten: run it ten times and record th
 
 ## What was run
 
-*(written when it is)*
+- 2026-10-18, laptop (Apple silicon, Docker), after Phase 1: `sbt clean test` ran 218 tests in 4 min
+  41 s; 216 passed. Every scenario of spec 001 passes against ankka 0.12.0 and ankka-contrib's sink.
+  The two that fail are the scenarios of `features/graph/vocabulary.feature` this spec changed to
+  name the process layer, on unbound steps, as planned until T026 binds them. `scalafmtCheckAll`
+  clean. On the laptop: `just up` with the contrib sink, the launch example seeded, `just rebuild`
+  to version 2, the same answer (research V3).

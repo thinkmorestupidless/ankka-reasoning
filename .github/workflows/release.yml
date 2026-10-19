@@ -2,7 +2,7 @@ name: release
 
 # A tag is a release, and only a tag publishes anything. `v0.1.0` publishes four things:
 #
-#   release-page   the tag's GitHub release, with the service descriptor and the pipeline blueprint
+#   release-page   the tag's GitHub release, with the service's and the graph sink's descriptors
 #                  of that version attached
 #   libraries      the three layer modules to Maven Central, signed:
 #                  com.thinkmorestupidless:ankka-reasoning-{graph,belief,market}_3
@@ -154,7 +154,7 @@ jobs:
     # org.opencontainers.image.source naming this repository (build.sbt), which links the package to
     # it. Then the two files a deployment of this version starts from are attached to the release:
     # the service descriptor, naming this image and the ankka version it was built against, and the
-    # pipeline's blueprint.
+    # graph sink's, naming the sink image the build pins.
     if: ${{ !contains(github.ref_name, '-') }}
     needs: release-page
     runs-on: ubuntu-24.04
@@ -193,7 +193,7 @@ jobs:
           docker image inspect "$image" --format '{{.Id}}'
           docker manifest inspect "$image" >/dev/null
           grep -n "\"image\": \"$image\"" target/deploy/service.json || { echo "::error::the descriptor does not name $image"; cat target/deploy/service.json; exit 1; }
-      - name: Attach the descriptor and the blueprint to the tag's release
+      - name: Attach the two descriptors to the tag's release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -202,10 +202,10 @@ jobs:
           # Where the broker and the graph database are is the cluster's to say, so those two
           # placeholders are left in; the deploy page says how they are filled.
           cp target/deploy/service.json "$RUNNER_TEMP/ankka-reasoning-$version-service.json"
-          cp deploy/pipeline/blueprint.conf "$RUNNER_TEMP/ankka-reasoning-$version-blueprint.conf"
+          cp target/deploy/graph-sink.json "$RUNNER_TEMP/ankka-reasoning-$version-graph-sink.json"
           gh release upload "$GITHUB_REF_NAME" \
             "$RUNNER_TEMP/ankka-reasoning-$version-service.json" \
-            "$RUNNER_TEMP/ankka-reasoning-$version-blueprint.conf" \
+            "$RUNNER_TEMP/ankka-reasoning-$version-graph-sink.json" \
             --clobber
 
   marketplace:

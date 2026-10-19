@@ -75,7 +75,7 @@ lazy val belief = project
   .settings(
     name := "ankka-reasoning-belief",
     description := "The belief layer of ankka-reasoning: its records, rules, graph consumers, answers and routes.",
-    libraryDependencies ++= Seq(ankkaSdk, ankkaRuntime, ankkaHttp, ankkaTestkit % Test)
+    libraryDependencies ++= Seq(ankkaSdk, ankkaRuntime, ankkaHttp, ankkaAgent, ankkaTestkit % Test)
   )
   .settings(published)
 
@@ -111,6 +111,8 @@ lazy val service = project
       ankkaSdk,
       ankkaRuntime,
       ankkaHttp,
+      ankkaAgent,
+      ankkaAuthOidc,
       ankkaTestkit         % Test,
       ankkaControlPlaneApi % Test,
       ujson                % Test,
@@ -173,11 +175,11 @@ schema := {
   out
 }
 
-// deploy/service.json with the image and the ankka version written in, into target/deploy. Where
-// the broker and the graph database are is the cluster's to say: REASONING_DEPLOY_KAFKA and
-// REASONING_DEPLOY_NEO4J_URI, and a placeholder left in is said so. A release attaches the file,
-// with those two left in, to its page.
-lazy val deployDescriptors = taskKey[File]("Renders deploy/service.json into target/deploy")
+// deploy/service.json and deploy/graph-sink.json with the images and the ankka version written in,
+// into target/deploy. Where the broker and the graph database are is the cluster's to say:
+// REASONING_DEPLOY_KAFKA and REASONING_DEPLOY_NEO4J_URI, and a placeholder left in is said so. A
+// release attaches both files, with those two left in, to its page.
+lazy val deployDescriptors = taskKey[File]("Renders deploy/*.json into target/deploy")
 deployDescriptors := {
   val log = streams.value.log
   val out = (ThisBuild / baseDirectory).value / "target" / "deploy"
@@ -186,17 +188,21 @@ deployDescriptors := {
   IO.createDirectory(out)
   val places = Seq(
     "${IMAGE}"         -> Some(image),
+    "${SINK_IMAGE}"    -> Some(V.sinkImage),
     "${ANKKA_VERSION}" -> Some(V.ankka),
     "${KAFKA}"         -> sys.env.get("REASONING_DEPLOY_KAFKA"),
     "${NEO4J_URI}"     -> sys.env.get("REASONING_DEPLOY_NEO4J_URI")
   )
-  val rendered =
-    places.foldLeft(IO.read((ThisBuild / baseDirectory).value / "deploy" / "service.json")) {
-      case (text, (place, Some(value))) => text.replace(place, value)
-      case (text, (place, None)) =>
-        log.warn(s"deployDescriptors: $place is not set and is left in target/deploy/service.json")
-        text
-    }
-  IO.write(out / "service.json", rendered)
+  Seq("service.json", "graph-sink.json").foreach { name =>
+    val rendered =
+      places.foldLeft(IO.read((ThisBuild / baseDirectory).value / "deploy" / name)) {
+        case (text, (place, Some(value))) => text.replace(place, value)
+        case (text, (place, None)) if text.contains(place) =>
+          log.warn(s"deployDescriptors: $place is not set and is left in target/deploy/$name")
+          text
+        case (text, _) => text
+      }
+    IO.write(out / name, rendered)
+  }
   out
 }

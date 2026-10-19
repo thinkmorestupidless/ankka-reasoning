@@ -31,7 +31,7 @@ deploy descriptor alike.
 |---|---|
 | Image | `ghcr.io/thinkmorestupidless/ankka-graph-sink-neo4j:<version>` |
 | Descriptor | `deploy/graph-sink.json`: `"http": false`, `"database": "none"`, env `ANKKA_GRAPH_SINK_TOPIC=reasoning-graph`, `ANKKA_GRAPH_SINK_VERSION`, `NEO4J_URI`, `NEO4J_USERNAME` and `NEO4J_PASSWORD` from the project secret `reasoning-graph`, `NEO4J_DATABASE` |
-| Topic | declared on the project before the service publishes: `ankka projects topics set reasoning-graph --partitions 3 --cleanup compact -p reasoning`; `max.compaction.lag.ms` one day where the installation allows topic config |
+| Topic | declared on the project before the service publishes: `ankka projects topics set reasoning-graph --partitions 3 --cleanup compact --max-compaction-lag 1d -p reasoning` |
 | Rebuild | empty the store (or point the sink at an empty one), apply the descriptor with `ANKKA_GRAPH_SINK_VERSION` one higher; locally `just rebuild` |
 
 - **D13.** The order on a cluster: create the project, declare the topic, create the secret, apply

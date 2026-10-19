@@ -230,8 +230,8 @@ The text is held in three places, and leaves each at its own time:
 | Place | Gone when |
 |---|---|
 | the service's own record | at once: the withdrawal's `200` means the row no longer holds it |
-| the graph database | when the merge sink has applied the record's new delta, usually within seconds |
-| the delta topic | when the broker compacts the record's key, at the latest one day after the withdrawal with the pipeline as shipped |
+| the graph database | when the graph sink has applied the record's new delta, usually within seconds |
+| the delta topic | when the broker compacts the record's key, at the latest one day after the withdrawal, with the topic declared as [Deploy on ankka](../deploy/deploy-on-ankka.md) declares it |
 
 The service's record goes at once because the record is one row that is written again without the
 text. No earlier version of the row is kept, and no event holds the text.
@@ -268,7 +268,7 @@ type(r), n.id
 
 The topic is last. It is compacted, so the broker keeps the latest delta for each element and in time
 discards the earlier ones; the delta that carried the text is superseded as soon as the new one is
-written, and is removed when the broker next compacts that part of the log. The pipeline sets the
+written, and is removed when the broker next compacts that part of the log. The topic's declaration sets the
 longest that can take, `max.compaction.lag.ms`, to one day. Until then a reader of the raw topic can
 still find the earlier delta. A graph database rebuilt from the topic applies the deltas in order and
 ends at the latest, so a rebuilt graph does not hold the text even inside that day.

@@ -18,8 +18,8 @@ mostly knowing which of the two a symptom belongs to, and that the copy can alwa
 | the delta topic `reasoning-graph` | the latest delta for every node and edge, compacted | the graph can no longer be rebuilt, though the records are intact |
 | the graph database, Neo4j | a copy of the topic | nothing: rebuild it |
 
-The service never writes to the graph database and creates nothing in it. The merge sink is its only
-writer.
+The service never writes to the graph database and creates nothing in it. The graph sink is its only
+writer, and keeps no state of its own: the topic is where it starts from.
 
 ## Rebuild the graph database
 
@@ -32,24 +32,21 @@ On a laptop, `just rebuild` does it:
 just rebuild
 ```
 
-It stops the sink, deletes every node, resets the sink's consumer group to the start of the topic, and
-starts the sink:
+It stops the sink, deletes every node, raises the sink's version by one, and starts the sink again. A
+sink at a new version reads the topic from its start. The version is kept in `.env` as
+`REASONING_SINK_VERSION`, which `docker-compose.yml` passes to the sink as `ANKKA_GRAPH_SINK_VERSION`:
 
-```bash
-docker compose stop sink
-docker compose exec -T neo4j cypher-shell -u neo4j -p reasoning-local-password \
-  "MATCH (n) CALL (n) { DETACH DELETE n } IN TRANSACTIONS OF 10000 ROWS"
-docker compose exec -T kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server kafka:9092 \
-  --group reasoning-graph.graph.in --reset-offsets --to-earliest --all-topics --execute
-docker compose start sink
+```text
+rebuild: the sink reads the topic again at version 2
 ```
 
-With 3,752 nodes and 11,350 edges on a laptop the graph was whole again in about six seconds, and an
-explanation asked before and after was the same, byte for byte.
+With the launch example recorded, the graph held its 12 nodes and 18 edges again within three seconds,
+and the answer to `/answers/belief` asked before and after was the same, byte for byte.
 
-On a cluster the steps are ankka-flow's, on its page
-[Rebuild a graph](https://flow.ankka.cloud/deploy/rebuild-a-graph/): scale the sink to zero, empty the
-database, `flow reset reasoning-graph --streamlet graph`, scale it up.
+On a cluster the steps are the same: empty the database, or point the sink at an empty one, and apply
+`deploy/graph-sink.json` again with `ANKKA_GRAPH_SINK_VERSION` one higher. ankka's
+[Fill a graph store](https://docs.ankka.cloud/deploy/graph-sink/#rebuild-the-store-from-the-topic)
+describes it.
 
 A rebuilt graph holds the latest state of every element and nothing older, so text withdrawn before
 the rebuild is not in it.
@@ -106,7 +103,7 @@ Each failure belongs to one store, and a write is affected only by the first.
 | Symptom | Where to look |
 |---|---|
 | writes fail or time out | the service and its database: nothing else is on a write's path |
-| writes succeed, `/graph/wait` reports `caughtUp: false` | the sink: its logs, and whether it can reach Kafka and Neo4j |
+| writes succeed, `/graph/wait` reports `caughtUp: false` | the sink: its logs, and whether it can reach Kafka and Neo4j; on a cluster `ankka services get reasoning-graph-sink` shows how far behind it is and which delta it is failing on |
 | `/answers` routes answer `503` with `graph.unavailable` | whether the service can reach Neo4j; a read gives up after five seconds |
 | answers are missing recent records | the sink is behind; `/graph/wait` on the record says what is missing |
 | the service logs `no broker is set (ANKKA_KAFKA_BOOTSTRAP_SERVERS), so the graph is not published` once at start | no broker is configured; records are held and nothing is published |

@@ -18,20 +18,6 @@ jobs:
           java-version: 21
           cache: sbt
       - uses: sbt/setup-sbt@v1
-      # The merge sink's released image cannot be pulled without a credential (research F8), so it
-      # is built from the tag it was released from and given the name the build asks for. Remove
-      # these two steps when the package is public.
-      - uses: actions/checkout@v5
-        with:
-          repository: thinkmorestupidless/ankka-flow
-          ref: v0.3.0
-          fetch-depth: 0
-          path: ankka-flow
-      - name: Build the merge sink's image from ankka-flow v0.3.0
-        working-directory: ankka-flow
-        run: |
-          sbt sidecar/Docker/publishLocal
-          docker tag ankka-flow-sidecar:0.3.0 ghcr.io/thinkmorestupidless/ankka-flow-sidecar:0.3.0
       - run: sbt scalafmtCheckAll scalafmtSbtCheck compile test
 
   features:

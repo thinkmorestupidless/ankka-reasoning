@@ -1,5 +1,5 @@
 # What a cluster would supply, for a laptop: Postgres for the service, Kafka with the delta topic
-# created compacted, Neo4j, and ankka-flow's sidecar running the built-in merge sink.
+# created compacted, Neo4j, and ankka-contrib's graph sink into Neo4j.
 # Run `sbt schema` first so target/ddl holds ankka's schema for Postgres' init directory; `just up`
 # does both. The service itself runs on the host: `just run`.
 # Where port 5432 is taken, REASONING_POSTGRES_PORT moves Postgres for `just up` and `just run` both.
@@ -38,7 +38,7 @@ services:
       interval: 5s
       timeout: 10s
       retries: 20
-  # Run once: the delta topic, compacted, as the pipeline's operator would create it in a cluster.
+  # Run once: the delta topic, compacted, as a project declares it in a cluster.
   topic:
     image: apache/kafka:3.9.1
     depends_on:
@@ -58,18 +58,20 @@ services:
       - "7687:7687"
     environment:
       NEO4J_AUTH: neo4j/reasoning-local-password
+  # The same image and variables as deploy/graph-sink.json. `just rebuild` raises
+  # REASONING_SINK_VERSION, kept in .env, to read the topic again from its start.
   sink:
-    image: ${REASONING_SINK_IMAGE:-ghcr.io/thinkmorestupidless/ankka-flow-sidecar:0.3.0}
+    image: ${REASONING_SINK_IMAGE:-ghcr.io/thinkmorestupidless/ankka-graph-sink-neo4j:0.1.0}
     depends_on:
       topic:
         condition: service_completed_successfully
       neo4j:
         condition: service_started
     environment:
-      FLOW_CONFIG_DIR: /etc/flow/config
-    volumes:
-      - ./compose/flow-graph:/etc/flow/config:ro
-      # What the operator mounts from the connection Secret in a cluster: one file per key.
-      - ./compose/neo4j-secret:/etc/flow/neo4j:ro
-    ports:
-      - "2051:2050"
+      ANKKA_GRAPH_SINK_TOPIC: reasoning-graph
+      ANKKA_GRAPH_SINK_VERSION: ${REASONING_SINK_VERSION:-1}
+      ANKKA_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      NEO4J_URI: neo4j://neo4j:7687
+      NEO4J_USERNAME: neo4j
+      NEO4J_PASSWORD: reasoning-local-password
+      NEO4J_DATABASE: neo4j
