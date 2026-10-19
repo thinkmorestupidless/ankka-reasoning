@@ -1,0 +1,186 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" role="img" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" aria-labelledby="title desc">
+  <title id="title">From a record to the graph</title>
+  <desc id="desc">The path of one change. A writer sends a record, here POST /claims, and is answered once the record is held. Inside the ankka-reasoning service the record is one entity, which checks every rule and is kept in the service's Postgres database: a key value record's state, or a belief's events. Each change, the new state or a new event at sequence number n, is polled from the database once a second and handed at least once to the graph consumer for that kind of record, which builds the record's node and an edge for each link the record stated, through the vocabulary. ankka publishes each element as one graph delta to the compacted Kafka topic reasoning-graph, keyed by the element, carrying version n and the element's whole state. The graph sink, a service of its own, applies a delta only when its version is newer than what Neo4j holds, merging the element by its key. The worked example: the claim launch.barrier-gone, stated by agent-a, deriving from a notice, supporting the hypothesis launch/yes and revising the claim launch.pending, becomes five deltas: the claim's node and four edges, all at the claim's version. In Neo4j each edge leaves the claim and points to a node that was already held, published by its own record. Withdrawing the statement later is a new change: the same five keys at a newer version, the node without its text; the sink replaces the node's properties whole, and compaction drops the older delta from the topic.</desc>
+  <style>
+    .bg { fill: #ffffff; }
+    .ink { fill: #1f2328; }
+    .muted { fill: #59636e; }
+    .box { fill: #f6f8fa; stroke: #afb8c1; stroke-width: 1.2; }
+    .hot { fill: #fff4ec; stroke: #c2410c; stroke-width: 1.5; }
+    .ns { fill: none; stroke: #8c959f; stroke-width: 1.2; stroke-dasharray: 5 4; }
+    .line { stroke: #1f2328; stroke-width: 1.4; fill: none; }
+    .dash { stroke: #59636e; stroke-width: 1.3; fill: none; stroke-dasharray: 4 3; }
+    .head { fill: #1f2328; }
+    .headmuted { fill: #59636e; }
+    text { font-size: 13px; }
+    .title { font-size: 14px; font-weight: 600; }
+    .small { font-size: 11.5px; }
+    .mono { font-size: 11.5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .edge { font-size: 10.5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .label { font-size: 11.5px; font-weight: 600; letter-spacing: 0.02em; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d1117; }
+      .ink { fill: #e6edf3; }
+      .muted { fill: #9198a1; }
+      .box { fill: #161b22; stroke: #3d444d; }
+      .hot { fill: #2a1a10; stroke: #ff8a4c; }
+      .ns { stroke: #656c76; }
+      .line { stroke: #e6edf3; }
+      .dash { stroke: #9198a1; }
+      .head { fill: #e6edf3; }
+      .headmuted { fill: #9198a1; }
+    }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" class="head"/>
+    </marker>
+    <marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" class="headmuted"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="700" rx="12"/>
+
+  <text class="label muted" x="40" y="44">THE PATH OF ONE CHANGE</text>
+
+  <!-- 1. The write -->
+  <rect class="box" x="40" y="96" width="160" height="112" rx="8"/>
+  <text class="title ink" x="120" y="122" text-anchor="middle">A write</text>
+  <text class="mono ink" x="120" y="142" text-anchor="middle">POST /claims</text>
+  <text class="small muted" x="120" y="162" text-anchor="middle">a writer states a claim,</text>
+  <text class="small muted" x="120" y="178" text-anchor="middle">answered once it is held</text>
+
+  <text class="small muted" x="40" y="270">A write is answered at the</text>
+  <text class="small muted" x="40" y="286">record. Nothing to its right</text>
+  <text class="small muted" x="40" y="302">is waited for.</text>
+
+  <!-- The service -->
+  <rect class="ns" x="220" y="64" width="568" height="270" rx="10"/>
+  <text class="small muted" x="232" y="82">ankka-reasoning, one ankka service</text>
+
+  <rect class="hot" x="232" y="96" width="160" height="112" rx="8"/>
+  <text class="title ink" x="312" y="122" text-anchor="middle">The record</text>
+  <text class="small muted" x="312" y="142" text-anchor="middle">one entity per record;</text>
+  <text class="small muted" x="312" y="158" text-anchor="middle">every rule checked here,</text>
+  <text class="small muted" x="312" y="174" text-anchor="middle">then kept, never edited</text>
+
+  <rect class="box" x="424" y="96" width="160" height="112" rx="8"/>
+  <text class="title ink" x="504" y="122" text-anchor="middle">Each change</text>
+  <text class="small muted" x="504" y="142" text-anchor="middle">a record's new state,</text>
+  <text class="small muted" x="504" y="158" text-anchor="middle">or a belief's new event,</text>
+  <text class="small muted" x="504" y="174" text-anchor="middle">at sequence number n</text>
+  <text class="small muted" x="504" y="190" text-anchor="middle">handed on at least once</text>
+
+  <rect class="hot" x="616" y="96" width="160" height="112" rx="8"/>
+  <text class="title ink" x="696" y="122" text-anchor="middle">Graph consumer</text>
+  <text class="mono ink" x="696" y="142" text-anchor="middle">claim-graph</text>
+  <text class="small muted" x="696" y="162" text-anchor="middle">one per kind of record:</text>
+  <text class="small muted" x="696" y="178" text-anchor="middle">a node, and an edge for</text>
+  <text class="small muted" x="696" y="194" text-anchor="middle">each link it stated</text>
+
+  <rect class="box" x="232" y="262" width="352" height="58" rx="8"/>
+  <text class="title ink" x="408" y="284" text-anchor="middle">Postgres</text>
+  <text class="small muted" x="408" y="303" text-anchor="middle">the service's own: a key value record's state, a belief's events</text>
+
+  <line class="line" x1="200" y1="152" x2="230" y2="152" marker-end="url(#a)"/>
+  <line class="line" x1="312" y1="208" x2="312" y2="260" marker-end="url(#a)"/>
+  <text class="small ink" x="320" y="240">kept</text>
+  <line class="line" x1="504" y1="262" x2="504" y2="210" marker-end="url(#a)"/>
+  <text class="small ink" x="496" y="240" text-anchor="end">polled each second</text>
+  <line class="line" x1="584" y1="152" x2="614" y2="152" marker-end="url(#a)"/>
+
+  <text class="small muted" x="616" y="236">Built only through the</text>
+  <text class="small muted" x="616" y="252">vocabulary: an undeclared</text>
+  <text class="small muted" x="616" y="268">label or property fails a</text>
+  <text class="small muted" x="616" y="284">unit test, never a delta.</text>
+
+  <!-- Kafka -->
+  <rect class="ns" x="796" y="64" width="184" height="160" rx="10"/>
+  <text class="small muted" x="808" y="82">Kafka</text>
+  <rect class="box" x="808" y="96" width="160" height="112" rx="8"/>
+  <text class="title ink" x="888" y="122" text-anchor="middle">Delta topic</text>
+  <text class="mono ink" x="888" y="142" text-anchor="middle">reasoning-graph</text>
+  <text class="small muted" x="888" y="162" text-anchor="middle">one delta per element:</text>
+  <text class="small muted" x="888" y="178" text-anchor="middle">key, version n, the</text>
+  <text class="small muted" x="888" y="194" text-anchor="middle">whole state; compacted</text>
+  <line class="line" x1="776" y1="152" x2="806" y2="152" marker-end="url(#a)"/>
+
+  <!-- The sink -->
+  <rect class="ns" x="988" y="64" width="184" height="160" rx="10"/>
+  <text class="small muted" x="1000" y="82">the graph sink service</text>
+  <rect class="box" x="1000" y="96" width="160" height="112" rx="8"/>
+  <text class="title ink" x="1080" y="122" text-anchor="middle">Graph sink</text>
+  <text class="small muted" x="1080" y="142" text-anchor="middle">ankka's, in ankka-</text>
+  <text class="small muted" x="1080" y="158" text-anchor="middle">contrib's Neo4j image;</text>
+  <text class="small muted" x="1080" y="174" text-anchor="middle">applies a delta only if</text>
+  <text class="small muted" x="1080" y="190" text-anchor="middle">its version is newer</text>
+  <line class="line" x1="968" y1="152" x2="998" y2="152" marker-end="url(#a)"/>
+
+  <rect class="box" x="1000" y="262" width="160" height="72" rx="8"/>
+  <text class="title ink" x="1080" y="286" text-anchor="middle">Graph database</text>
+  <text class="small muted" x="1080" y="305" text-anchor="middle">Neo4j: each element</text>
+  <text class="small muted" x="1080" y="321" text-anchor="middle">merged by its key</text>
+  <line class="line" x1="1080" y1="208" x2="1080" y2="260" marker-end="url(#a)"/>
+  <text class="small ink" x="1088" y="240">merges</text>
+
+  <!-- The worked example -->
+  <text class="label muted" x="40" y="382">ONE CLAIM, FIVE DELTAS</text>
+
+  <rect class="box" x="40" y="398" width="360" height="200" rx="8"/>
+  <text class="mono ink" x="56" y="424">POST /claims</text>
+  <text class="mono muted" xml:space="preserve" x="56" y="444">{</text>
+  <text class="mono muted" xml:space="preserve" x="56" y="461">  "id": "launch.barrier-gone",</text>
+  <text class="mono muted" xml:space="preserve" x="56" y="478">  "holder": "agent-a",</text>
+  <text class="mono muted" xml:space="preserve" x="56" y="495">  "statement": "the approval barrier has gone",</text>
+  <text class="mono muted" xml:space="preserve" x="56" y="512">  "derivesFrom": ["&lt;the notice&gt;"],</text>
+  <text class="mono muted" xml:space="preserve" x="56" y="529">  "stances": [{"hypothesis": "launch/yes",</text>
+  <text class="mono muted" xml:space="preserve" x="56" y="546">               "stance": "supports"}],</text>
+  <text class="mono muted" xml:space="preserve" x="56" y="563">  "revises": "launch.pending"</text>
+  <text class="mono muted" xml:space="preserve" x="56" y="580">}</text>
+
+  <line class="line" x1="400" y1="498" x2="430" y2="498" marker-end="url(#a)"/>
+
+  <rect class="hot" x="432" y="398" width="340" height="200" rx="8"/>
+  <text class="small ink" x="448" y="422">each a key, the claim's version and a whole state</text>
+  <text class="mono ink" x="448" y="448">node:claim:launch.barrier-gone</text>
+  <text class="mono muted" x="464" y="465">Claim · statement, withdrawn, dated</text>
+  <text class="mono ink" x="448" y="490">edge:STATED_BY|claim:…|holder:agent-a</text>
+  <text class="mono ink" x="448" y="510">edge:DERIVES_FROM|claim:…|evidence:…</text>
+  <text class="mono ink" x="448" y="530">edge:SUPPORTS|claim:…|hypothesis:launch/yes</text>
+  <text class="mono ink" x="448" y="550">edge:REVISES|claim:…|claim:launch.pending</text>
+  <text class="small muted" x="448" y="580">A change handled twice publishes the same five.</text>
+
+  <line class="line" x1="772" y1="498" x2="802" y2="498" marker-end="url(#a)"/>
+
+  <!-- The graph it leaves -->
+  <rect class="ns" x="804" y="398" width="368" height="200" rx="10"/>
+  <text class="small muted" x="816" y="416">in Neo4j</text>
+  <rect class="hot" x="816" y="469" width="146" height="44" rx="8"/>
+  <text class="small ink" x="889" y="487" text-anchor="middle">Claim</text>
+  <text class="mono ink" x="889" y="504" text-anchor="middle">launch.barrier-gone</text>
+  <rect class="box" x="1056" y="428" width="110" height="34" rx="6"/>
+  <text class="small ink" x="1111" y="442" text-anchor="middle">Holder</text>
+  <text class="mono muted" x="1111" y="456" text-anchor="middle">agent-a</text>
+  <path class="line" d="M962,479 L974,445 L1054,445" marker-end="url(#a)"/>
+  <text class="edge ink" x="1044" y="441" text-anchor="end">STATED_BY</text>
+  <rect class="box" x="1056" y="470" width="110" height="34" rx="6"/>
+  <text class="small ink" x="1111" y="484" text-anchor="middle">Evidence</text>
+  <text class="mono muted" x="1111" y="498" text-anchor="middle">the notice</text>
+  <path class="line" d="M962,487 L974,487 L1054,487" marker-end="url(#a)"/>
+  <text class="edge ink" x="1044" y="483" text-anchor="end">DERIVES_FROM</text>
+  <rect class="box" x="1056" y="512" width="110" height="34" rx="6"/>
+  <text class="small ink" x="1111" y="526" text-anchor="middle">Hypothesis</text>
+  <text class="mono muted" x="1111" y="540" text-anchor="middle">launch/yes</text>
+  <path class="line" d="M962,495 L974,529 L1054,529" marker-end="url(#a)"/>
+  <text class="edge ink" x="1044" y="525" text-anchor="end">SUPPORTS</text>
+  <rect class="box" x="1056" y="554" width="110" height="34" rx="6"/>
+  <text class="small ink" x="1111" y="568" text-anchor="middle">Claim</text>
+  <text class="mono muted" x="1111" y="582" text-anchor="middle">launch.pending</text>
+  <path class="line" d="M962,503 L974,571 L1054,571" marker-end="url(#a)"/>
+  <text class="edge ink" x="1044" y="567" text-anchor="end">REVISES</text>
+
+  <text class="small muted" x="40" y="634">Every edge leaves the record that states it and points to a record already held. The four nodes it points to were published by their own records, earlier.</text>
+  <text class="small muted" x="40" y="652">Withdrawing the statement later is a new change: the same five keys at a newer version, the node without its text. The sink replaces the node's properties</text>
+  <text class="small muted" x="40" y="670">whole, and compaction drops the older delta from the topic. Neo4j can be emptied and filled again from the topic alone.</text>
+</svg>
