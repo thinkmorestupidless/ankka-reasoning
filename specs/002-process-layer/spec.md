@@ -155,10 +155,11 @@ belief resting on those claims with weights. Run over the June tranche with the 
 revision as input, it revises the belief again, following the first. A second version of the
 blueprint, registered afterwards with different instructions, is run the same way for a second
 holder. Then the three questions are answered from records a process wrote: the case for *it
-launches this year* after the second run walks back to the June documents and nothing else; as of
-a day between the tranches the belief is the first run's and the June tranche is learned since;
-the explanation of the change names the approval document and the run that read it; the two
-holders rest on the same claims with different weights; and every critique passed.
+launches this year* after the second run holds the supporting claims of both tranches, each with
+the run that wrote it; as of a day between the tranches the belief is the first run's and the June
+tranche is learned since; the explanation of the change names the approval document and the run
+that read it; the two holders rest on claims of their own from the same evidence, with different
+weights; and every critique passed.
 
 **Why this priority**: It is the proof. The three questions were the reason for the belief layer;
 answering them about records a process wrote, rather than typed, is what this feature is for.
@@ -175,10 +176,10 @@ only, and nothing dated or recorded out of order.
 - added `features/process/golden-set.feature`: the appraiser run over the June tranche revises the belief, following the first
 - added `features/process/golden-set.feature`: a run whose critique fails revises no belief, and what it wrote stays held
 - added `features/process/golden-set.feature`: a second blueprint version gives a second holder's belief from the same documents
-- added `features/process/golden-set.feature`: the case for the hypothesis after the second run walks back to the June tranche only
+- added `features/process/golden-set.feature`: the case for the hypothesis after the second run holds the supporting claims of both tranches, each with the run that wrote it
 - added `features/process/golden-set.feature`: as of a day between the tranches the belief is the first run's, and the June tranche is learned since
 - added `features/process/golden-set.feature`: the explanation of the change names the approval document and the run that read it
-- added `features/process/golden-set.feature`: the two holders rest on the same claims with different weights
+- added `features/process/golden-set.feature`: the two holders rest on claims of their own from the same evidence, with different weights
 - added `features/process/golden-set.feature`: the market resolved afterwards lists each holder's belief with the version that wrote it
 - added `features/process/golden-set.feature`: the golden set runs with no model key and no network
 
@@ -321,11 +322,12 @@ with its act.
 - **FR-012**: Run over the golden set with a model scripted from the expected readings, the
   appraiser MUST give, for each holder, a first belief revision resting on five claims and a
   second following it resting on claims from the June documents, and the four answers: the case
-  for *it launches this year* after the second run derives only from June documents; as of a day
-  between the tranches the belief is the first revision and the June evidence, claims and
-  revisions are learned since; the explanation of the change names the claim derived from the
-  approval document, its evidence, and the run that wrote it; and the two holders' beliefs rest on
-  the same claims with weights that differ.
+  for *it launches this year* after the second run is the supporting claims of both tranches, each
+  with the run that wrote it; as of a day between the tranches the belief is the first revision and
+  the June evidence, claims and revisions are learned since; the explanation of the change names
+  the claim derived from the approval document, its evidence, and the run that wrote it; and the
+  two holders' beliefs rest on claims of their own, derived from the same evidence, with weights
+  that differ.
 - **FR-013**: Every living feature of this repository MUST pass with no model key and no network,
   the golden set's included; the model is scripted from the expected readings, and the critique's
   verdict is scripted too.

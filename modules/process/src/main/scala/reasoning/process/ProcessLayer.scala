@@ -133,6 +133,7 @@ object ProcessLayer:
         )
       ,
       clients => ActsEndpoint(recorder(clients, clock, belief), clients.viewClient, acl),
+      clients => AppraiserEndpoint(recorder(clients, clock, belief), agents, acl),
       _ => ProcessAnswersEndpoint(answers, acl),
       _ => ProcessMarketAnswersEndpoint(answers, acl)
     )

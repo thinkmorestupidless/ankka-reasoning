@@ -77,6 +77,15 @@ object ProcessRules:
         "version"   -> version.toString
       )
 
+  /** The appraiser is registered again only with an instruction set the service carries. */
+  def instructionsUnknown(instructions: String): Refusal =
+    Refusal(
+      "appraiser.instructions.unknown",
+      422,
+      s"The service carries no instruction set '$instructions'.",
+      Map("instructions" -> instructions)
+    )
+
   /** The step a tool is called in names one worker, or the act could not say who wrote. */
   def actWorkerUnknown(run: String, step: String, worker: Option[String]): Option[Refusal] =
     if worker.isDefined then None

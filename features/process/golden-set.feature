@@ -45,11 +45,11 @@ Feature: The golden set
     And each of its belief revisions has an act naming blueprint version 2
     And each belief revision of "appraiser-a" has an act naming blueprint version 1
 
-  Scenario: the case for the hypothesis after the second run walks back to the June tranche only
+  Scenario: the case for the hypothesis after the second run holds the supporting claims of both tranches, each with the run that wrote it
     Given the appraiser run for "appraiser-a" over the May tranche and then the June tranche
     And the graph has caught up
     When a reader asks for the case for the hypothesis "it launches this year"
-    Then every claim in the case derives from evidence recorded from a document of the June tranche
+    Then the case holds every claim that supports the hypothesis, from the May tranche and from the June tranche
     And each claim is given with the act and the run that wrote it
 
   Scenario: as of a day between the tranches the belief is the first run's, and the June tranche is learned since
@@ -66,13 +66,13 @@ Feature: The golden set
     Then the explanation gives the claim derived from the approval document as newly rested on, with its evidence and its source
     And the claim is given with the act and the run over the June tranche that wrote it
 
-  Scenario: the two holders rest on the same claims with different weights
+  Scenario: the two holders rest on claims of their own from the same evidence, with different weights
     Given the appraiser run for "appraiser-a" and, at blueprint version 2, for "appraiser-b", each over both tranches
     And the graph has caught up
     When a reader compares the beliefs of "appraiser-a" and "appraiser-b" in "it launches this year"
-    Then the claims both rest on derive from the same evidence
-    And at least one claim is given with two different weights
-    And no claim is only one holder's
+    Then no claim is both holders', each resting on claims of its own
+    And every claim one holder rests on derives from the same evidence as a claim the other rests on
+    And at least one piece of evidence is read by the two holders with different weights
 
   Scenario: the market resolved afterwards lists each holder's belief with the version that wrote it
     Given the appraiser run for "appraiser-a" and, at blueprint version 2, for "appraiser-b", each over both tranches

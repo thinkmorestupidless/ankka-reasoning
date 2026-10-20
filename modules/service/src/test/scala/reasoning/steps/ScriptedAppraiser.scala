@@ -55,17 +55,24 @@ final class ScriptedAppraiser(
 
   def weight(document: Document): Double = document.expectedReading.weight.of(instructions)
 
-  /** Rests the revision on this evidence's claim instead: the claim derives from it. */
-  def withClaimFrom(evidence: String): Unit = derivesFrom = Some(Vector(evidence))
+  /** The one document whose claim derives from `derivesFrom`; every document when unset. */
+  var strayDocument: Option[String] = None
 
-  /** The judgment answers no for this document's claim, in the next run of the tranche. */
-  def judgeNo(tranche: String, document: String): Unit =
-    val documents = goldenSet.tranche(tranche).map(_.documents).getOrElse(Vector.empty)
-    judge.expect(
-      documents.map(d =>
-        Answers.yesNo(Appraiser.question, if d.id == document then 0.05 else 0.95)
-      )*
-    ): Unit
+  /**
+   * The claim of `document` (every claim, when none is named) derives from this evidence instead of
+   * the evidence the reader just recorded.
+   */
+  def withClaimFrom(evidence: String, document: String = ""): Unit =
+    derivesFrom = Some(Vector(evidence))
+    strayDocument = Option(document).filter(_.nonEmpty)
+
+  /**
+   * The judgment answers no to every claim, so the critique fails on the first item it judges. A
+   * standing answer is looked up before any queued one, so the yes installed earlier goes first.
+   */
+  def judgeNo(): Unit =
+    judge.reset()
+    judge.always(Answers.yesNo(Appraiser.question, 0.05)): Unit
 
   def install(): Unit =
     judge.always(Answers.yesNo(Appraiser.question, 0.95)): Unit
@@ -92,8 +99,12 @@ final class ScriptedAppraiser(
         Scripted.call(
           Tools.StateClaim,
           Json.obj(
-            "statement"   -> Json.str(statement(document)),
-            "derivesFrom" -> Json.Arr(derivesFrom.getOrElse(Vector(evidence)).map(Json.str)),
+            "statement" -> Json.str(statement(document)),
+            "derivesFrom" -> Json.Arr(
+              (if strayDocument.forall(_ == document.id) then
+                 derivesFrom.getOrElse(Vector(evidence))
+               else Vector(evidence)).map(Json.str)
+            ),
             "stances" -> Json.arr(
               Json.str(
                 stance.getOrElse(
