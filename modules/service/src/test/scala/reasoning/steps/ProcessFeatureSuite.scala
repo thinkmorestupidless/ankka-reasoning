@@ -482,9 +482,12 @@ abstract class ProcessFeatureSuite(feature: String, graph: Boolean = false)
       all.map(a => (a("record")("kind").str, a("record")("id").str)).distinct.size,
       all.size
     )
+    // The act of a record is read from rows that may lag the acts of the run by a moment.
     all.foreach { a =>
-      val byRecord = actOf(a("record")("kind").str, a("record")("id").str)
-      assertEquals(byRecord.map(_("id").str), Some(a("id").str))
+      Eventually.eventually() {
+        val byRecord = actOf(a("record")("kind").str, a("record")("id").str)
+        assertEquals(byRecord.map(_("id").str), Some(a("id").str))
+      }
     }
   }
 
@@ -504,8 +507,14 @@ abstract class ProcessFeatureSuite(feature: String, graph: Boolean = false)
   }
 
   Then("the act of the evidence names the earlier run") { () =>
-    assertEquals(actOf("evidence", w.evidence).map(_("run").str), Some(w.notes("earlier")))
+    // The rows the acts are read from may lag the writes by a moment.
+    Eventually.eventually() {
+      assertEquals(actOf("evidence", w.evidence).map(_("run").str), Some(w.notes("earlier")))
+    }
     // The later run wrote no act for it: the record keeps the earlier run's.
+    Eventually.eventually() {
+      assertEquals(actsOf(w.notes("later"), "claim").size, docs("may").size)
+    }
     val later = actsOf(w.notes("later"), "evidence").map(_("record")("id").str)
     assertEquals(later.count(_ == w.evidence), 0)
   }
@@ -516,7 +525,9 @@ abstract class ProcessFeatureSuite(feature: String, graph: Boolean = false)
       held(s"/claims/$claim")("claim")("derivesFrom").arr.map(_.str).toList,
       List(w.evidence)
     )
-    assertEquals(actOf("claim", claim).map(_("run").str), Some(w.notes("later")))
+    Eventually.eventually() {
+      assertEquals(actOf("claim", claim).map(_("run").str), Some(w.notes("later")))
+    }
   }
 
   // ── No run ────────────────────────────────────────────────────────────────
@@ -668,7 +679,9 @@ abstract class ProcessFeatureSuite(feature: String, graph: Boolean = false)
   Then(
     "the reader reaches the act that wrote it, the run {string} and blueprint version {int} of the appraiser"
   ) { (id: String, n: Int) =>
-    val act = actOf("revision", w.revision).getOrElse(fail("the revision has no act"))
+    val act = Eventually.eventually()(
+      actOf("revision", w.revision).getOrElse(fail("the revision has no act"))
+    )
     assertEquals(w.notes("act"), act("id").str)
     assertEquals(w.notes("walkedRun"), s"run:${runId(id)}")
     assertEquals(w.notes("version"), s"blueprint-version:${Ids.version(Blueprint, versionAt(n))}")
@@ -748,7 +761,7 @@ abstract class ProcessFeatureSuite(feature: String, graph: Boolean = false)
     assertEquals(edges.toVector.sorted.mkString("\n"), w.notes("edges"))
     val ids = nodes.map(_.takeWhile(_ != ' '))
     val run = w.notes("run")
-    assert(ids.contains(s"blueprint-version:${Ids.version(Blueprint, 1)}"), ids.toString)
+    assert(ids.contains(s"blueprint-version:${Ids.version(Blueprint, versionAt(1))}"), ids.toString)
     assert(ids.contains(s"run:$run"), ids.toString)
     assert(ids.contains(s"run-ending:$run"), ids.toString)
     assertEquals(ids.count(_.startsWith("act:")), 11)
@@ -962,8 +975,10 @@ abstract class ProcessFeatureSuite(feature: String, graph: Boolean = false)
       val claim    = claimId(run, "may", doc.id)
       assertEquals(held(s"/evidence/$evidence")("id").str, evidence)
       assertEquals(held(s"/claims/$claim")("claim")("id").str, claim)
-      assertEquals(actOf("evidence", evidence).map(_("run").str), Some(run), doc.id)
-      assertEquals(actOf("claim", claim).map(_("run").str), Some(run), doc.id)
+      Eventually.eventually() {
+        assertEquals(actOf("evidence", evidence).map(_("run").str), Some(run), doc.id)
+        assertEquals(actOf("claim", claim).map(_("run").str), Some(run), doc.id)
+      }
     }
   }
 
