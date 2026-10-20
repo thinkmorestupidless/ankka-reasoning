@@ -673,13 +673,33 @@ answer up before the queue, so a no queued after `always(yes)` never reaches the
 then fails on the first item, the filing's, whose claim `withClaimFrom(evidence, "filing")` made
 derive from evidence a writer recorded from no document. T047's `judgeNo(<that claim>)` is that.
 
+**F-v. The live suite runs against the graph fixture's service, with its providers switched.**
+R15 and T050 gave the live suite a fixture of its own, the service alone with Anthropic's and
+Jev's providers. What US4 asserts last, every record traced in the graph, is read through
+`/process/answers/run`, which reads the graph database: the service alone cannot answer it. A
+fixture of its own would then be a second Kafka, Neo4j and sink, or two services over one topic
+and one graph, whose projections would read each other's events. Instead `LiveFixture` is the
+graph fixture's service whose text model and judgment are a pair of switches: the scripted
+providers every other suite scripts, or, within `LiveFixture.within`, the real ones from the
+environment. The real providers are made only when a suite is inside `within`, which requires
+both keys; nothing in the build makes one. `GraphFixture.agents` takes the switches.
+
+**F-w. The live suite is seen skipped by running it, not by reading the build.** *The live suite is
+skipped, not failed, when there is no model key* runs `LiveAppraiserSuite` inside the feature's
+own test with munit's JUnit runner and an empty environment, and reads what the runner reports:
+every test an assumption failure, none a failure. The suite takes the environment it looks for
+the keys in, so a developer whose shell has the keys sees the scenario hold the same way. The
+scenario asserts nothing of the test JVM's own environment.
+
 ## Measurements
 
 | Criterion | What was timed | Measured | Where | Verdict |
 |---|---|---|---|---|
 | SC-006 | the golden set's four runs, the graph caught up and an answer (*the two holders…*, *the market resolved afterwards…*) | 6 s a scenario; the four runs alone 4.2 s; the eleven scenarios of `GoldenSetFeatures` 50 s | 2026-10-19, an Apple silicon laptop, the scripted model, the sink under amd64 emulation | well under the two minutes asked |
 
-*(SC-007: ten live runs; SC-009: time to the graph of a record a run writes, with its act: Phase 7)*
+| SC-007 | `sbt 'service/testOnly *LiveAppraiserSuite *LiveFeatures'` without the keys | 1 passed, 3 skipped, 0 failed: the live suite's test and the feature's two scenarios with a key skipped, the scenario without a key passed | 2026-10-20, an Apple silicon laptop, no key in the environment | skipped, not failed |
+
+*(SC-007's ten live runs with the keys, and SC-009: Phase 7)*
 
 ## Requests
 
