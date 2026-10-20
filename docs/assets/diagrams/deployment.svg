@@ -1,0 +1,203 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 850" role="img" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" aria-labelledby="title desc">
+  <title id="title">ankka-reasoning on an installation</title>
+  <desc id="desc">ankka-reasoning deploys as two services in one ankka project. You or a CI job use the ankka CLI, through the installation's gateway, to create the project, declare the delta topic, set the secret and apply the two descriptors each release attaches; the control plane and the operator create and own each service's Deployment, database and route. The service reasoning is one image, a Scala service of one or more JVM instances forming one Pekko cluster, with the layers compiled in: graph, belief, market and process, composed by the service module; the layers are also published as libraries. Running, it has graph consumers, HTTP endpoints on port 9000, one entity per record, and answers. Its records are kept in its own database in the project's Postgres. Its graph consumers publish deltas to the topic reasoning-graph in the installation's Kafka, declared on the project and compacted. The second service, reasoning-graph-sink, is ankka's graph sink in ankka-contrib's image, with no HTTP, no database and no code of ankka-reasoning in it: it reads the topic and merges each delta into Neo4j 5.26 or later, which you provide where the project can reach it. Both read the Neo4j credentials from the project secret reasoning-graph. The service's answers read Neo4j over Bolt, read only. People reach the service through the gateway at its exposed hostname with a token from an issuer the service lists; another ankka service reaches it in the cluster over mutual TLS and writes as service, its project and name. Readers with a Cypher client query Neo4j directly, read only.</desc>
+  <style>
+    .bg { fill: #ffffff; }
+    .ink { fill: #1f2328; }
+    .muted { fill: #59636e; }
+    .box { fill: #f6f8fa; stroke: #afb8c1; stroke-width: 1.2; }
+    .hot { fill: #fff4ec; stroke: #c2410c; stroke-width: 1.5; }
+    .cluster { fill: none; stroke: #59636e; stroke-width: 1.5; }
+    .ns { fill: none; stroke: #8c959f; stroke-width: 1.2; stroke-dasharray: 5 4; }
+    .deploy { fill: none; stroke: #afb8c1; stroke-width: 1.2; stroke-dasharray: 3 3; }
+    .line { stroke: #1f2328; stroke-width: 1.4; fill: none; }
+    .dash { stroke: #59636e; stroke-width: 1.3; fill: none; stroke-dasharray: 4 3; }
+    .gap { stroke: #ffffff; stroke-width: 7; fill: none; }
+    .head { fill: #1f2328; }
+    .headmuted { fill: #59636e; }
+    text { font-size: 13px; }
+    .title { font-size: 14px; font-weight: 600; }
+    .small { font-size: 11.5px; }
+    .mono { font-size: 11.5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .label { font-size: 11.5px; font-weight: 600; letter-spacing: 0.02em; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d1117; }
+      .ink { fill: #e6edf3; }
+      .muted { fill: #9198a1; }
+      .box { fill: #161b22; stroke: #3d444d; }
+      .hot { fill: #2a1a10; stroke: #ff8a4c; }
+      .cluster { stroke: #9198a1; }
+      .ns { stroke: #656c76; }
+      .deploy { stroke: #3d444d; }
+      .line { stroke: #e6edf3; }
+      .dash { stroke: #9198a1; }
+      .gap { stroke: #0d1117; }
+      .head { fill: #e6edf3; }
+      .headmuted { fill: #9198a1; }
+    }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" class="head"/>
+    </marker>
+    <marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" class="headmuted"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="850" rx="12"/>
+
+  <!-- Outside the installation -->
+  <text class="label muted" x="24" y="64">OUTSIDE</text>
+  <rect class="box" x="24" y="84" width="180" height="78" rx="8"/>
+  <text class="title ink" x="114" y="108" text-anchor="middle">You, or CI</text>
+  <text class="small muted" x="114" y="128" text-anchor="middle">the ankka CLI: project,</text>
+  <text class="small muted" x="114" y="144" text-anchor="middle">topic, secret, descriptors</text>
+
+  <rect class="box" x="24" y="330" width="180" height="92" rx="8"/>
+  <text class="title ink" x="114" y="356" text-anchor="middle">People</text>
+  <text class="small muted" x="114" y="376" text-anchor="middle">a browser, an app, a script,</text>
+  <text class="small muted" x="114" y="392" text-anchor="middle">with a token from an</text>
+  <text class="small muted" x="114" y="408" text-anchor="middle">issuer the service lists</text>
+
+  <!-- The installation -->
+  <rect class="cluster" x="228" y="40" width="948" height="690" rx="14"/>
+  <text class="label muted" x="246" y="64">ANKKA INSTALLATION</text>
+
+  <rect class="box" x="246" y="84" width="110" height="500" rx="8"/>
+  <text class="title ink" x="301" y="108" text-anchor="middle">Gateway</text>
+  <text class="small muted" x="301" y="126" text-anchor="middle">HTTPS</text>
+  <text class="small ink" x="350" y="146" text-anchor="end">api.&lt;base&gt;</text>
+  <text class="small ink" x="350" y="400" text-anchor="end">reasoning-</text>
+  <text class="small ink" x="350" y="415" text-anchor="end">reasoning.</text>
+  <text class="small ink" x="350" y="430" text-anchor="end">&lt;base&gt;</text>
+  <line class="line" x1="204" y1="123" x2="244" y2="123" marker-end="url(#a)"/>
+  <line class="line" x1="204" y1="376" x2="244" y2="376" marker-end="url(#a)"/>
+
+  <rect class="hot" x="380" y="84" width="576" height="70" rx="8"/>
+  <text class="title ink" x="668" y="110" text-anchor="middle">Control plane and operator</text>
+  <text class="small muted" x="668" y="130" text-anchor="middle">a descriptor in; each service's Deployment, database and route out, and its status back</text>
+  <line class="line" x1="356" y1="123" x2="378" y2="123" marker-end="url(#a)"/>
+  <line class="line" x1="668" y1="154" x2="668" y2="174" marker-end="url(#a)"/>
+  <text class="small ink" x="676" y="169">creates and owns</text>
+
+  <!-- The project -->
+  <rect class="ns" x="372" y="176" width="584" height="530" rx="10"/>
+  <text class="small muted" x="384" y="194">ankka-reasoning: the project reasoning, one namespace</text>
+
+  <!-- The service -->
+  <rect class="deploy" x="388" y="204" width="552" height="292" rx="8"/>
+  <text class="title ink" x="404" y="226">reasoning</text>
+  <text class="small muted" x="478" y="226">the service · one image · Scala, one Pekko cluster</text>
+
+  <text class="small muted" x="404" y="252">compiled in</text>
+  <rect class="hot" x="404" y="262" width="208" height="38" rx="6"/>
+  <text class="mono ink" x="416" y="285">service</text>
+  <text class="small muted" x="482" y="285">composes the layers</text>
+  <rect class="box" x="404" y="306" width="208" height="38" rx="6"/>
+  <text class="mono ink" x="416" y="329">process</text>
+  <text class="small muted" x="482" y="329">runs and blueprints</text>
+  <rect class="box" x="404" y="350" width="208" height="38" rx="6"/>
+  <text class="mono ink" x="416" y="373">market</text>
+  <text class="small muted" x="482" y="373">markets, resolutions</text>
+  <rect class="box" x="404" y="394" width="208" height="38" rx="6"/>
+  <text class="mono ink" x="416" y="417">belief</text>
+  <text class="small muted" x="482" y="417">records and rules</text>
+  <rect class="box" x="404" y="438" width="208" height="38" rx="6"/>
+  <text class="mono ink" x="416" y="461">graph</text>
+  <text class="small muted" x="482" y="461">vocabulary, reader</text>
+  <text class="small muted" x="404" y="490">each layer is also a library</text>
+
+  <text class="small muted" x="628" y="252">running, one or more instances</text>
+  <rect class="hot" x="628" y="262" width="296" height="48" rx="6"/>
+  <text class="small ink" x="640" y="281" font-weight="600">Graph consumers</text>
+  <text class="small muted" x="640" y="299">one per kind of record; publish deltas</text>
+  <rect class="box" x="628" y="316" width="296" height="48" rx="6"/>
+  <text class="small ink" x="640" y="335" font-weight="600">HTTP endpoints, port 9000</text>
+  <text class="small muted" x="640" y="353">writes, /answers, /graph/wait, /graph/vocabulary</text>
+  <rect class="box" x="628" y="370" width="296" height="48" rx="6"/>
+  <text class="small ink" x="640" y="389" font-weight="600">Entities</text>
+  <text class="small muted" x="640" y="407">one per record; every rule is checked here</text>
+  <rect class="box" x="628" y="424" width="296" height="48" rx="6"/>
+  <text class="small ink" x="640" y="443" font-weight="600">Answers</text>
+  <text class="small muted" x="640" y="461">Cypher over Bolt, read only</text>
+
+  <line class="line" x1="356" y1="376" x2="386" y2="376" marker-end="url(#a)"/>
+
+  <!-- Beside the service in the project -->
+  <rect class="box" x="388" y="520" width="170" height="72" rx="8"/>
+  <text class="title ink" x="473" y="544" text-anchor="middle">Postgres</text>
+  <text class="small muted" x="473" y="563" text-anchor="middle">the service's own database,</text>
+  <text class="small muted" x="473" y="579" text-anchor="middle">every record</text>
+  <line class="line" x1="473" y1="496" x2="473" y2="518" marker-end="url(#a)"/>
+
+  <rect class="box" x="574" y="520" width="170" height="72" rx="8"/>
+  <text class="title ink" x="659" y="544" text-anchor="middle">Secret</text>
+  <text class="mono muted" x="659" y="563" text-anchor="middle">reasoning-graph</text>
+  <text class="small muted" x="659" y="579" text-anchor="middle">Neo4j's user, for both</text>
+
+  <text class="small muted" x="388" y="628">Both services are applied from the descriptors</text>
+  <text class="small muted" x="388" y="644">each release attaches. On a laptop, docker compose</text>
+  <text class="small muted" x="388" y="660">runs Postgres, Kafka, Neo4j and the sink, and</text>
+  <text class="small muted" x="388" y="676"><tspan class="mono">just run</tspan> runs the service on port 9000.</text>
+
+  <!-- The sink -->
+  <rect class="deploy" x="760" y="520" width="180" height="170" rx="8"/>
+  <text class="title ink" x="772" y="542">reasoning-graph-sink</text>
+  <rect class="box" x="772" y="554" width="156" height="124" rx="6"/>
+  <text class="small ink" x="850" y="574" text-anchor="middle" font-weight="600">Graph sink</text>
+  <text class="small muted" x="850" y="592" text-anchor="middle">ankka's, in ankka-contrib's</text>
+  <text class="mono muted" x="850" y="609" text-anchor="middle">graph-sink-neo4j</text>
+  <text class="small muted" x="850" y="628" text-anchor="middle">no HTTP, no database;</text>
+  <text class="small muted" x="850" y="644" text-anchor="middle">nothing of ours compiled</text>
+  <text class="small muted" x="850" y="660" text-anchor="middle">in: the topic is its input</text>
+
+  <!-- What the project reaches -->
+  <rect class="ns" x="976" y="196" width="184" height="136" rx="10"/>
+  <text class="small muted" x="988" y="214">Kafka, the installation's</text>
+  <rect class="box" x="988" y="224" width="160" height="96" rx="8"/>
+  <text class="title ink" x="1068" y="248" text-anchor="middle">Delta topic</text>
+  <text class="mono ink" x="1068" y="267" text-anchor="middle">reasoning-graph</text>
+  <text class="small muted" x="1068" y="286" text-anchor="middle">declared on the project,</text>
+  <text class="small muted" x="1068" y="302" text-anchor="middle">compacted</text>
+
+  <rect class="box" x="976" y="600" width="184" height="96" rx="8"/>
+  <text class="title ink" x="1068" y="624" text-anchor="middle">Neo4j 5.26 or later</text>
+  <text class="small muted" x="1068" y="644" text-anchor="middle">yours, where the project</text>
+  <text class="small muted" x="1068" y="660" text-anchor="middle">can reach it; a copy, rebuilt</text>
+  <text class="small muted" x="1068" y="676" text-anchor="middle">from the topic alone</text>
+
+  <!-- consumers -> topic -->
+  <line class="line" x1="924" y1="286" x2="986" y2="286" marker-end="url(#a)"/>
+  <text class="small ink" x="955" y="279" text-anchor="middle">deltas</text>
+
+  <!-- answers -> Neo4j, read only -->
+  <path class="dash" d="M924,448 L1100,448 L1100,598" marker-end="url(#m)"/>
+  <text class="small muted" x="1108" y="530">reads,</text>
+  <text class="small muted" x="1108" y="546">Bolt</text>
+
+  <!-- topic -> sink, hopping the read line -->
+  <line class="gap" x1="1020" y1="440" x2="1020" y2="456"/>
+  <path class="line" d="M1020,320 L1020,580 L942,580" marker-end="url(#a)"/>
+  <text class="small ink" x="1028" y="380">reads</text>
+
+  <!-- sink -> Neo4j -->
+  <line class="line" x1="940" y1="650" x2="974" y2="650" marker-end="url(#a)"/>
+
+  <!-- Another ankka service -->
+  <rect class="box" x="246" y="606" width="110" height="100" rx="8"/>
+  <text class="small ink" x="301" y="628" text-anchor="middle" font-weight="600">Another</text>
+  <text class="small ink" x="301" y="643" text-anchor="middle" font-weight="600">ankka service</text>
+  <text class="small muted" x="301" y="662" text-anchor="middle">mutual TLS,</text>
+  <text class="small muted" x="301" y="677" text-anchor="middle">writes as</text>
+  <text class="mono muted" x="301" y="694" text-anchor="middle">service:p/n</text>
+  <path class="line" d="M356,640 L380,640 L380,470 L386,470" marker-end="url(#a)"/>
+
+  <!-- Readers with Cypher -->
+  <rect class="box" x="976" y="758" width="184" height="72" rx="8"/>
+  <text class="title ink" x="1068" y="782" text-anchor="middle">Readers with Cypher</text>
+  <text class="small muted" x="1068" y="801" text-anchor="middle">cypher-shell, a notebook;</text>
+  <text class="small muted" x="1068" y="817" text-anchor="middle">read only</text>
+  <line class="dash" x1="1068" y1="758" x2="1068" y2="698" marker-end="url(#m)"/>
+  <text class="small muted" x="1076" y="740">Bolt</text>
+</svg>

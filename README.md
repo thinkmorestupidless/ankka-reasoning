@@ -126,6 +126,29 @@ believed as of 6 May, it answers 0.38, resting on the first claim, with the noti
 it had not been observed. If a market prices the same outcome at 0.48, the comparison gives 0.48
 against 0.61, the claims agent-a rests on, and the market stating no reasons.
 
+## From a record to the graph
+
+![The path of one change. A writer sends a record, here POST /claims, and is answered once the record is held. Inside the ankka-reasoning service the record is one entity, which checks every rule and is kept in the service's Postgres database: a key value record's state, or a belief's events. Each change, the new state or a new event at sequence number n, is polled from the database once a second and handed at least once to the graph consumer for that kind of record, which builds the record's node and an edge for each link the record stated, through the vocabulary. ankka publishes each element as one graph delta to the compacted Kafka topic reasoning-graph, keyed by the element, carrying version n and the element's whole state. The graph sink, a service of its own, applies a delta only when its version is newer than what Neo4j holds, merging the element by its key. The worked example: the claim launch.barrier-gone, stated by agent-a, deriving from a notice, supporting the hypothesis launch/yes and revising the claim launch.pending, becomes five deltas: the claim's node and four edges, all at the claim's version. In Neo4j each edge leaves the claim and points to a node that was already held, published by its own record. Withdrawing the statement later is a new change: the same five keys at a newer version, the node without its text; the sink replaces the node's properties whole, and compaction drops the older delta from the topic.](docs/assets/diagrams/pipeline.svg)
+
+The claim of 11 May, written once, becomes five graph deltas: its node and an edge for each link it
+stated. ankka hands every change to the graph consumer for that kind of record, at least once;
+the consumer builds the elements through the vocabulary; ankka publishes each one keyed by the
+element, at the change's version and with its whole state. The graph sink applies a delta only
+when it is newer than what Neo4j holds, so a change handled twice changes nothing, and Neo4j can be
+emptied and filled again from the topic alone.
+
+## How it runs
+
+![ankka-reasoning deploys as two services in one ankka project. You or a CI job use the ankka CLI, through the installation's gateway, to create the project, declare the delta topic, set the secret and apply the two descriptors each release attaches; the control plane and the operator create and own each service's Deployment, database and route. The service reasoning is one image, a Scala service of one or more JVM instances forming one Pekko cluster, with the layers compiled in: graph, belief, market and process, composed by the service module; the layers are also published as libraries. Running, it has graph consumers, HTTP endpoints on port 9000, one entity per record, and answers. Its records are kept in its own database in the project's Postgres. Its graph consumers publish deltas to the topic reasoning-graph in the installation's Kafka, declared on the project and compacted. The second service, reasoning-graph-sink, is ankka's graph sink in ankka-contrib's image, with no HTTP, no database and no code of ankka-reasoning in it: it reads the topic and merges each delta into Neo4j 5.26 or later, which you provide where the project can reach it. Both read the Neo4j credentials from the project secret reasoning-graph. The service's answers read Neo4j over Bolt, read only. People reach the service through the gateway at its exposed hostname with a token from an issuer the service lists; another ankka service reaches it in the cluster over mutual TLS and writes as service, its project and name. Readers with a Cypher client query Neo4j directly, read only.](docs/assets/diagrams/deployment.svg)
+
+Two services in one ankka project. `reasoning` is this repository: one image with the layers
+compiled in, its records in its own Postgres database. `reasoning-graph-sink` is ankka's graph sink in
+[ankka-contrib](https://github.com/thinkmorestupidless/ankka-contrib)'s image, with nothing of this
+repository in it; the topic between them is the only thing they share. Kafka is the installation's
+and Neo4j is yours. People write through the gateway with a token, other ankka services call it
+over mutual TLS, and anyone with a Cypher client can read the graph directly; nobody writes to it but
+the sink.
+
 ## What is here now
 
 | | |
