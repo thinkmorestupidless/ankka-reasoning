@@ -3,7 +3,7 @@ title: Graph vocabulary
 description: Look up every kind of node and edge the graph can hold, with its identifier, its properties, its layer and the kind of record that publishes it, and the query that traces a belief to its sources.
 kind: reference
 layers: [belief, market, process]
-related: [build/read-the-graph.md, concepts/layers.md, concepts/records-and-links.md, reference/http-api.md]
+related: [build/read-the-graph.md, concepts/layers.md, concepts/process-layer.md, concepts/records-and-links.md, reference/http-api.md]
 ---
 
 # Graph vocabulary
@@ -111,13 +111,14 @@ A void resolution has no `outcome` and no `RESOLVES_TO` edge.
 
 ## Process layer
 
-The process layer adds the kinds in the two tables here and no holder kind: a run writes as a
-holder of the belief layer's. It records which run of which blueprint version wrote a piece of
-evidence, a claim or a belief revision. Every edge it adds leaves one of its own nodes, so it
-changes nothing in the layers beneath it.
+The process layer adds the kinds in the two tables here and no holder kind. It records which run of
+which blueprint version wrote a piece of evidence, a claim or a belief revision, in which step and
+as which worker. Every edge it adds leaves one of its own nodes, so it changes nothing in the
+layers beneath it.
 
-The service hosts ankka's blueprints but carries none, and no route starts a run, so the graph
-holds none of these kinds; see [limitations](limitations.md).
+A run writes as a holder of the belief layer's, so the layer names no holder kind of its own.
+[The process layer](../concepts/layers.md) says what each record is, and
+[Run a blueprint](../build/run-a-blueprint.md) how they come to be written.
 
 ### Nodes
 
@@ -143,7 +144,22 @@ ended, and an act as the record it names. A run with no `RunEnding` is running. 
 | `AS` | `Act` | `Holder` | | act |
 
 `GET /graph/vocabulary` names the three kinds of node `WROTE` may run to as
-`Evidence|Claim|BeliefRevision`.
+`Evidence|Claim|BeliefRevision`. An act's `id` is `act:` and 56 hexadecimal characters, a digest of
+the run and the record. A record a person or a script wrote has no `Act` and no `WROTE` edge into
+it.
+
+## The trace from a belief to the run that wrote it
+
+From a belief revision, through its act, to the run and the version of the blueprint the run was
+of:
+
+```cypher
+MATCH (r:Element {id: $revision})<-[:WROTE]-(a:Act)-[:IN]->(run:Run)-[:OF]->(v:BlueprintVersion)
+RETURN a.step, a.worker, run.id, v.version
+```
+
+With `$revision` set to `revision:appraiser-a-june.yes` after the golden set's runs it returns one
+row: the step `revise`, the worker `reviser`, the run `run:appraiser-a-june` and version 1.
 
 ## The trace from a belief to its sources
 

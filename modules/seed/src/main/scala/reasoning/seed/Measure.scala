@@ -5,7 +5,9 @@ import ujson.{Arr, Obj}
 import java.net.URI
 import java.net.http.{HttpClient, HttpRequest, HttpResponse}
 import java.time.Duration
-import java.util.concurrent.{ConcurrentLinkedQueue, Executors, TimeUnit}
+import java.nio.file.{Files, Paths}
+import java.util.concurrent.{ConcurrentHashMap, ConcurrentLinkedQueue, Executors, TimeUnit}
+import scala.concurrent.duration.DurationInt
 import scala.jdk.CollectionConverters.*
 
 /**
@@ -21,7 +23,7 @@ object Measure:
 
   private val client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build()
 
-  private def request(baseUrl: String, path: String, body: Option[String]): (Int, String) =
+  private[seed] def request(baseUrl: String, path: String, body: Option[String]): (Int, String) =
     val builder = HttpRequest.newBuilder(URI.create(baseUrl + path)).timeout(Duration.ofSeconds(90))
     body match
       case Some(json) =>
@@ -32,7 +34,7 @@ object Measure:
     val response = client.send(builder.build(), HttpResponse.BodyHandlers.ofString())
     (response.statusCode, response.body)
 
-  private def waitFor(baseUrl: String, kind: String, id: String): Boolean =
+  private[seed] def waitFor(baseUrl: String, kind: String, id: String): Boolean =
     val (status, body) = request(
       baseUrl,
       "/graph/wait",
@@ -40,10 +42,10 @@ object Measure:
     )
     status == 200 && ujson.read(body)("caughtUp").bool
 
-  private def millis(since: Long): Long = (System.nanoTime() - since) / 1000000L
+  private[seed] def millis(since: Long): Long = (System.nanoTime() - since) / 1000000L
 
   /** The value below which `share` of the sorted values lie. */
-  private def within(sorted: Vector[Long], share: Double): Long =
+  def within(sorted: Vector[Long], share: Double): Long =
     sorted(((sorted.size - 1) * share).round.toInt)
 
   /** Every record of the seeded set, each timed from its `201` to its wait ending. */
@@ -199,3 +201,205 @@ object Measure:
         s"median ${within(toAnswer, 0.5)} ms, slowest ${toAnswer.last} ms (target: one second)"
     )
     if within(toGraph, 0.9) > 5000L || toAnswer.last > 1000L then sys.exit(1)
+
+/**
+ * The golden set's four runs of the appraiser, timed against a running service with its graph
+ * beside it and a model behind it: each record a run wrote, to the graph with its act, from the
+ * run's end; and the whole set, from the first run started to the comparison of the two holders
+ * answered from the graph with every act in it.
+ *
+ * A record's time is counted from the moment its run is seen to have ended, not from its write,
+ * which a client over HTTP cannot see; so each figure is an upper bound on the time from the write.
+ * Every run records under a question of its own, so it can be run again beside the last.
+ */
+object MeasureGoldenSet:
+
+  val Holders: Vector[String]  = Vector("appraiser-a", "appraiser-b")
+  val Tranches: Vector[String] = Vector("may", "june")
+
+  /** The last day of a tranche's month, after everything in it is published. */
+  def observedAt(tranche: String): String =
+    if tranche == "june" then "2026-06-30T09:00:00Z" else "2026-05-31T09:00:00Z"
+
+  final case class Timed(record: String, act: String, millis: Long)
+
+  final case class Result(
+      question: String,
+      runs: Vector[String],
+      runMillis: Vector[Long],
+      records: Vector[Timed],
+      wholeMillis: Long
+  ):
+    def recordTimes: Vector[Long] = records.map(_.millis).sorted
+
+  private def get(baseUrl: String, path: String): ujson.Value =
+    val (status, body) = Measure.request(baseUrl, path, None)
+    if status != 200 then sys.error(s"GET $path answered $status: $body")
+    ujson.read(body)
+
+  private def post(baseUrl: String, path: String, body: ujson.Value): ujson.Value =
+    val (status, answer) = Measure.request(baseUrl, path, Some(ujson.write(body)))
+    if status != 200 && status != 201 then sys.error(s"POST $path answered $status: $answer")
+    ujson.read(answer)
+
+  /**
+   * The golden set's question under the run's prefix; the sources the service registered itself.
+   */
+  def seedQuestion(baseUrl: String, run: String): String =
+    val question = ujson.read(Files.readString(Paths.get("golden-set", "question.json")))
+    val id       = s"$run-${question("id").str}"
+    post(
+      baseUrl,
+      "/questions",
+      Obj(
+        "id"         -> id,
+        "statement"  -> question("statement"),
+        "hypotheses" -> question("hypotheses"),
+        "dated"      -> "2026-05-01T09:00:00Z"
+      )
+    ): Unit
+    id
+
+  /** Starts one run and waits for its ending; the moment it was seen to have ended, in nanos. */
+  def runTranche(
+      baseUrl: String,
+      question: String,
+      holder: String,
+      tranche: String,
+      id: String,
+      follows: Option[String]
+  ): Long =
+    val input = Obj(
+      "tranche"    -> tranche,
+      "holder"     -> holder,
+      "question"   -> question,
+      "observedAt" -> observedAt(tranche)
+    )
+    follows.foreach(f => input("follows") = f)
+    post(
+      baseUrl,
+      "/process/runs",
+      Obj("blueprint" -> "appraiser", "runId" -> id, "input" -> input)
+    ): Unit
+    val deadline = System.nanoTime() + 15.minutes.toNanos
+    var ended    = Option.empty[ujson.Value]
+    while ended.isEmpty && System.nanoTime() < deadline do
+      val run = get(baseUrl, s"/process/runs/$id")
+      ended = run.obj.get("ending")
+      if ended.isEmpty then Thread.sleep(200)
+    val ending = ended.getOrElse(sys.error(s"the run $id did not end in time"))
+    if ending("status").str != "completed" then
+      sys.error(
+        s"the run $id ended ${ending("status").str}: ${ending.obj.get("reason").fold("")(_.str)}"
+      )
+    System.nanoTime()
+
+  /**
+   * Every record the run wrote, timed from `since` to the graph holding the record and its act: the
+   * record through `/graph/wait`, the act through the run's answer from the graph.
+   */
+  def timeRecords(baseUrl: String, run: String, tranche: String, since: Long): Vector[Timed] =
+    val acts = actsOf(baseUrl, run, tranche)
+    val seen = ConcurrentHashMap[String, Long]()
+    // One poller for the acts of the run in the graph; one waiter per record.
+    val poller = Thread.ofVirtual().start { () =>
+      val deadline = System.nanoTime() + 2.minutes.toNanos
+      def missing  = acts.exists(a => !seen.containsKey(a("id").str))
+      while missing && System.nanoTime() < deadline do
+        val (status, body) = Measure.request(baseUrl, s"/process/answers/run?run=$run", None)
+        if status == 200 then
+          ujson.read(body)("wrote").arr.foreach { w =>
+            seen.putIfAbsent(w("act")("id").str, System.nanoTime()): Unit
+          }
+        if missing then Thread.sleep(100)
+    }
+    val waiters = Executors.newVirtualThreadPerTaskExecutor()
+    val timed = acts.map { act =>
+      val kind = act("record")("kind").str
+      val id   = act("record")("id").str
+      waiters.submit[Timed] { () =>
+        if !Measure.waitFor(baseUrl, kind, id) then
+          sys.error(s"$kind $id of the run $run did not reach the graph within thirty seconds")
+        val recordAt = System.nanoTime()
+        poller.join()
+        val actAt = Option(seen.get(act("id").str))
+          .getOrElse(sys.error(s"the act ${act("id").str} of the run $run did not reach the graph"))
+        Timed(s"$kind:$id", act("id").str, (recordAt.max(actAt) - since) / 1000000L)
+      }
+    }
+    waiters.shutdown()
+    timed.map(_.get())
+
+  /**
+   * The acts of a run once the rows they are listed from have caught up with its writes: a claim
+   * per document of the tranche and one revision, which every run writes, and whatever evidence the
+   * run recorded first; the list is taken once it has stood still for a moment.
+   */
+  def actsOf(baseUrl: String, run: String, tranche: String): Vector[ujson.Value] =
+    val documents =
+      ujson.read(Files.readString(Paths.get("golden-set", s"$tranche.json")))("documents").arr.size
+    val deadline = System.nanoTime() + 2.minutes.toNanos
+    var last     = Vector.empty[ujson.Value]
+    var still    = 0
+    while still < 5 && System.nanoTime() < deadline do
+      val acts   = get(baseUrl, s"/process/runs/$run/acts")("acts").arr.toVector
+      val kinds  = acts.groupBy(_("record")("kind").str).map((k, v) => k -> v.size)
+      val enough = kinds.getOrElse("claim", 0) == documents && kinds.getOrElse("revision", 0) == 1
+      if enough && acts.size == last.size then still += 1 else still = 0
+      last = acts
+      if still < 5 then Thread.sleep(200)
+    if still < 5 then sys.error(s"the acts of the run $run were not listed in time")
+    last
+
+  def measure(baseUrl: String, run: String, log: String => Unit = println): Result =
+    val question = seedQuestion(baseUrl, run)
+    val started  = System.nanoTime()
+    val runs     = Vector.newBuilder[String]
+    val runTimes = Vector.newBuilder[Long]
+    val records  = Vector.newBuilder[Timed]
+    Holders.foreach { holder =>
+      Tranches.foreach { tranche =>
+        val id      = s"$run-$holder-$tranche"
+        val follows = Option.when(tranche != Tranches.head)(s"$run-$holder-${Tranches.head}.yes")
+        val from    = System.nanoTime()
+        val ended   = runTranche(baseUrl, question, holder, tranche, id, follows)
+        runs += id
+        runTimes += (ended - from) / 1000000L
+        log(s"run $id ended after ${(ended - from) / 1000000L} ms")
+        records ++= timeRecords(baseUrl, id, tranche, ended)
+      }
+    }
+    // The whole set is in the graph when the two holders compare, with every act in the answer.
+    val deadline = System.nanoTime() + 2.minutes.toNanos
+    var answered = false
+    while !answered && System.nanoTime() < deadline do
+      val (status, body) = Measure.request(
+        baseUrl,
+        s"/process/answers/comparison?hypothesis=$question/yes&a=${Holders(0)}&b=${Holders(1)}",
+        None
+      )
+      answered = status == 200 && {
+        val answer = ujson.read(body)
+        answer("answer").obj.get("difference").isDefined && answer("acts").arr.nonEmpty
+      }
+      if !answered then Thread.sleep(100)
+    if !answered then sys.error("the comparison of the two holders was not answered from the graph")
+    Result(question, runs.result(), runTimes.result(), records.result(), Measure.millis(started))
+
+  def main(args: Array[String]): Unit =
+    val baseUrl = if args.nonEmpty then args(0) else "http://localhost:9000"
+    val run     = s"g${java.lang.Long.toString(System.currentTimeMillis() / 1000, 36)}"
+    println(s"run $run against $baseUrl")
+    val result = measure(baseUrl, run)
+    val times  = result.recordTimes
+    println(
+      s"the four runs: ${result.runMillis.mkString(", ")} ms; " +
+        s"${result.records.size} records to the graph with their acts, from each run's end: " +
+        s"median ${Measure.within(times, 0.5)} ms, nine in ten within ${Measure.within(times, 0.9)} ms, " +
+        s"slowest ${times.last} ms (target: five seconds, nine in ten)"
+    )
+    println(
+      s"the whole set, from the first run started to the two holders compared from the graph: " +
+        s"${result.wholeMillis} ms (target: two minutes)"
+    )
+    if Measure.within(times, 0.9) > 5000L || result.wholeMillis > 120000L then sys.exit(1)

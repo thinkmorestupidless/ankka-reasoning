@@ -691,6 +691,60 @@ every test an assumption failure, none a failure. The suite takes the environmen
 the keys in, so a developer whose shell has the keys sees the scenario hold the same way. The
 scenario asserts nothing of the test JVM's own environment.
 
+**F-x. A run of a blueprint the service does not carry answered `500`.** `RunsEndpoint` checked
+`blueprint.not-held` in the same `Rules.require` as the input's shape, whose arguments are built
+before any is checked, so `starter.carried(request.blueprint)` threw for a name not carried and no
+scenario had asked. The rule is now required on its own first; `ReadRefusalsSuite` breaks it, and
+the refusals page shows the `404`.
+
+**F-y. The release job would have refused the process module.** `release.yml` checks the Central
+bundle holds exactly the modules it names, and still named three; `process` carries `published`,
+so the first tag after this feature would have failed at the upload step by design. The check names
+four now, and `releasing.md` with it. Nothing was published: only a tag runs the job.
+
+**F-z. The version's record, and the acts', lag the reply that made them.** `POST
+/process/appraiser/versions` answers from ankka's registration; the service's own record of the
+version is copied from the `VersionRegistered` event (V7), so `GET /process/appraiser/versions/{n}`
+asked at once is `404` for a moment. An answer with acts reads the graph, where an act arrives
+after its record: a comparison asked the instant the second holder's run ended carried the first
+holder's acts and not yet the second's. Both are the lag the limitations page names; the docs
+captures wait, and the pages say to read again.
+
+**F-aa. A second holder's runs write twenty records, not twenty-eight, in a shared service.** The
+measure of the golden set's four runs counts what each run wrote through its acts. Against a fresh
+service the first holder's runs write the eight pieces of evidence; in the test JVM, where the
+docs capture had already run the same tranches, no run wrote evidence (F-t). The suite asserts
+sixteen claims and four revisions and either nought or eight pieces of evidence, and the golden
+set page says why the figure is twenty.
+
+**F-ab. The measurement is from a run's end, not from each write.** A client over HTTP cannot see
+when a tool wrote a record, only when the run ended, so `measure-golden-set` times every record of
+a run from the run's end to the graph holding the record and its act. Each figure is an upper
+bound on the time from the write; the criterion is met with room (Measurements).
+
+**F-ac. The laptop walkthrough and the kind installation were not run this time.** `just up` binds
+Kafka on 9094 and Neo4j on 7687, both held by another project's kind cluster on the laptop that
+day, and the `kind-ankka` cluster was not running; neither was stopped for this. The replies on the
+pages are the service's under the graph fixture, with the test kit's writer `service:test/writer`
+where a laptop shows `local`; the no-key run on the live page is from `ServiceStartsSuite`, which
+now starts a run with no key and reads its ending. Quickstart tiers 4 and 5 are recorded as not
+run.
+
+**F-ad. The appraiser has six steps.** The contract's sketch had five; a sixth, `close`, calls
+`revision-check`, which fails the run when the reviser was refused or answered with no revision,
+so a run never ends `completed` without a revision. The appraiser page lists six.
+
+**F-ae. A wait longer than twenty seconds was answered by Pekko HTTP, as text.** `sbt clean test`
+on the laptop failed seven graph scenarios the first time and one the second, each at a
+`/graph/wait` of thirty seconds after a rebuild, with a body that was not JSON: Pekko HTTP's
+request timeout, twenty seconds by default, had answered `The server was not able to produce a
+timely response` before the wait ended. The sink under emulation re-reads the whole topic after a
+rebuild, hundreds of records by then, and on a busy laptop took longer than twenty seconds; CI on
+amd64 never has. The service now sets `pekko.http.server.request-timeout` to sixty seconds, above
+the longest wait it accepts (`REASONING_WAIT_LIMIT_MAX_MS`, thirty seconds by default), so a wait
+is answered by the wait. The three suites passed alone before the change; the full run passed
+after it (quickstart "What was run").
+
 ## Measurements
 
 | Criterion | What was timed | Measured | Where | Verdict |
@@ -699,7 +753,12 @@ scenario asserts nothing of the test JVM's own environment.
 
 | SC-007 | `sbt 'service/testOnly *LiveAppraiserSuite *LiveFeatures'` without the keys | 1 passed, 3 skipped, 0 failed: the live suite's test and the feature's two scenarios with a key skipped, the scenario without a key passed | 2026-10-20, an Apple silicon laptop, no key in the environment | skipped, not failed |
 
-*(SC-007's ten live runs with the keys, and SC-009: Phase 7)*
+| SC-009 | the golden set's four runs under `GoldenSetMeasureSuite` (`MeasureGoldenSet.measure` with the scripted model): each record from its run's end to the graph holding it and its act | twenty records: median 1,497 ms, nine in ten within 1,572 ms, slowest 1,574 ms; the four runs 655, 451, 666 and 845 ms | 2026-10-21, an Apple silicon laptop, the sink under amd64 emulation, in the test JVM after `DocsCaptureSuite` | under the five seconds asked, nine in ten |
+| SC-006 | the same four runs, to the comparison of the two holders answered from the graph with both holders' acts | 8,471 ms for the whole set | as above | under the two minutes asked |
+
+SC-007's nine in ten over ten live runs with the keys: not run; no key was available in the
+sessions that built this feature. The live suite is skipped without them (above) and has run once
+against placeholder keys, which proved the plumbing to the point of Anthropic's `401`.
 
 ## Requests
 

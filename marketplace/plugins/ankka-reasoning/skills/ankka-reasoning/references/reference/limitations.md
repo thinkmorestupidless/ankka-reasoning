@@ -8,12 +8,20 @@ deliberate. Each entry says how the system behaves today, so a reader can plan r
 
 ## What is not built
 
-- **No agent writes to it.** Records arrive from a person, a script or another service over the
-  [HTTP API](http-api.md). Nothing in the service gathers evidence, states a claim or forecasts.
-- **The process layer is named, and nothing writes it.** The vocabulary names blueprint versions,
-  runs, run endings and acts, and the service hosts ankka's blueprints, but it carries no blueprint
-  and no route starts a run. The graph holds what was concluded and on what grounds, not how a
-  record came to be made: no goals, tasks, model calls or sessions.
+- **One blueprint, over documents given to it.** The service carries [the appraiser](../build/the-appraiser.md)
+  and no other, and a blueprint is not registered over HTTP: only the appraiser's second
+  instruction set is. It reads the documents of [the golden set](../build/golden-set.md), or of a
+  directory in the same shape named by `REASONING_GOLDEN_SET`; nothing in the service gathers
+  evidence from anywhere else.
+- **The process layer records who wrote a record, not the conversation.** An act names the run,
+  the step and the worker. No goal, task, model call, prompt or session is a record, and a run
+  cannot be replayed from the graph.
+- **A tool cannot fail a run.** A tool refuses a record and tells the model; the run goes on. The
+  appraiser's critique fails the run from a step after the one that found the fault, so the records
+  written before the verdict stay held, with their acts.
+- **A tool takes at most three parameters**, so `record_evidence` names a document of the tranche
+  and reads its source, locator and publication date from there; evidence of a document the
+  tranche does not hold cannot be recorded by a run.
 - **No scoring.** Once a market is resolved the service can say what each holder believed at the
   time. It does not say which holders or which evidence were worth listening to.
 - **A belief does not think again by itself.** `GET /answers/resting-on-revised` lists the beliefs
@@ -22,9 +30,10 @@ deliberate. Each entry says how the system behaves today, so a reader can plan r
 - **Nothing checks that probabilities add up.** A belief is one holder's probability for one
   hypothesis. A holder's probabilities for the hypotheses of one question are not required to sum
   to one.
-- **No version has been released.** A release publishes the service's image, the three layers as
-  libraries and the documentation as a plugin, and none has been made. Until one is, the service
-  is built from the repository.
+- **The process layer is in no release yet.** Release 0.1.1 publishes the service's image, the
+  belief, market and graph modules as libraries and the documentation as a plugin, without the
+  process layer, the appraiser or the `/process` routes. Until the next release, those run from
+  the repository.
 
 ## What is unproven
 
@@ -33,9 +42,18 @@ deliberate. Each entry says how the system behaves today, so a reader can plan r
   descriptor, have not been run on any installation, local or cloud. Everything else in this
   documentation was run on a laptop, with Postgres, Kafka, Neo4j and the graph sink in containers.
 - **Time to the graph is measured on a laptop only.** Under a burst of 555 writes, nine in ten
-  records were in the graph within 3.8 seconds of their `201` and the slowest took 4.4. The floor
-  is a poll: the service asks its database what has changed once a second, and a record cannot
-  reach the graph sooner than the next poll.
+  records were in the graph within 3.8 seconds of their `201` and the slowest took 4.4. Over the
+  golden set's four runs with a scripted model, nine in ten records a run wrote were in the graph
+  with their acts within 1.6 seconds of the run's end, and the whole set was answered in 8.5. The
+  floor is a poll: the service asks its database what has changed once a second, and a record
+  cannot reach the graph sooner than the next poll.
+- **The appraiser against a real model is proved once at a time, by hand.** The live suite runs
+  only with `ANTHROPIC_API_KEY` and `TYPESAFE_API_KEY` in the environment and is skipped
+  otherwise, so the build never runs it. How often a real model reads the golden set the way the
+  set expects has not been measured over repeated runs.
+- **A model key is needed for any run.** Without both keys the service starts and serves every
+  other route, and every run fails at its first model call, naming the key. The two keys are
+  ankka's providers' and no other provider is wired in.
 
 ## Who can write
 
@@ -49,6 +67,24 @@ deliberate. Each entry says how the system behaves today, so a reader can plan r
   from a holder.
 - **Stewards are set at start.** The writers who may withdraw any record's text are listed in
   `REASONING_STEWARDS` and read once; changing the list is a restart.
+
+## Runs
+
+- **A record can be held without its act for a moment.** A tool writes the record, then the act,
+  and answers the model after both. If the service stops between the two, the record is held with
+  no act until ankka runs the step again after a restart and the tool is called again, when the
+  record is a repeat and the act is written. No run that has ended leaves a record without its
+  act.
+- **A run's acts and a record's act are read from a view** that may lag the write by a moment. An
+  answer under `/process` reads the graph, which lags too; `POST /graph/wait` on the act's own
+  identifier says when it is there.
+- **A run id is at most 47 characters** and may not start `schedule:`, which ankka reserves. An
+  identifier anywhere else is at most 64.
+- **A run is of the version current when it started.** There is no way to run an earlier version
+  again, and no version is ever removed.
+- **The holders a blueprint may be run for are set at start**, in `REASONING_APPRAISER_HOLDERS`,
+  each registered of kind `agent`; a run for any other holder is refused. The blueprint's writer,
+  `blueprint:appraiser`, cannot be given to a holder over HTTP.
 
 ## Reading
 

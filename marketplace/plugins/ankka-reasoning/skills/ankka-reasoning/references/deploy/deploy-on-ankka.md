@@ -9,10 +9,11 @@ the service, and `reasoning-graph-sink`, ankka's
 `ghcr.io/thinkmorestupidless/ankka-graph-sink-neo4j`, which reads the delta topic into Neo4j. The
 topic is declared on the project, compacted, before anything publishes to it.
 
-The order on this page is: the project, the topic, the secret, the sink, the service. These steps
-have not been run on an installation, local or cloud; the descriptors decode under ankka's own rules,
-and the same image and variables run beside the service on a laptop, as
-[Run it on your machine](../get-started/run-locally.md) shows.
+The order on this page is: the project, the topic, the secrets, the sink, the service. The topic
+must exist, compacted, before the service first publishes; the sink keeps no state of its own, so
+which of the last two goes first does not matter. These steps have not been run on an installation,
+local or cloud; the descriptors decode under ankka's own rules, and the same image and variables run
+beside the service on a laptop, as [Run it on your machine](../get-started/run-locally.md) shows.
 
 ![ankka-reasoning deploys as two services in one ankka project. You or a CI job use the ankka CLI, through the installation's gateway, to create the project, declare the delta topic, set the secret and apply the two descriptors each release attaches; the control plane and the operator create and own each service's Deployment, database and route. The service reasoning is one image, a Scala service of one or more JVM instances forming one Pekko cluster, with the layers compiled in: graph, belief, market and process, composed by the service module; the layers are also published as libraries. Running, it has graph consumers, HTTP endpoints on port 9000, one entity per record, and answers. Its records are kept in its own database in the project's Postgres. Its graph consumers publish deltas to the topic reasoning-graph in the installation's Kafka, declared on the project and compacted. The second service, reasoning-graph-sink, is ankka's graph sink in ankka-contrib's image, with no HTTP, no database and no code of ankka-reasoning in it: it reads the topic and merges each delta into Neo4j 5.26 or later, which you provide where the project can reach it. Both read the Neo4j credentials from the project secret reasoning-graph. The service's answers read Neo4j over Bolt, read only. People reach the service through the gateway at its exposed hostname with a token from an issuer the service lists; another ankka service reaches it in the cluster over mutual TLS and writes as service, its project and name. Readers with a Cypher client query Neo4j directly, read only.](../assets/diagrams/deployment.svg)
 
@@ -46,6 +47,15 @@ ankka projects secrets set reasoning-graph username=<neo4j user> password=- -p r
 ```
 
 `password=-` reads the value from standard input, so it is not left in the shell's history.
+
+A run of the appraiser needs a model and a judgment, each from a key. Without them the service
+starts and serves everything else, and every run fails at its first model call, naming the key.
+Set the two as a second secret, and name them in the service descriptor's `env` as
+[Live, against a real model](live.md) shows:
+
+```bash
+ankka projects secrets set reasoning-models ANTHROPIC_API_KEY=- TYPESAFE_API_KEY=- -p reasoning
+```
 
 ## Get the image and the descriptors
 
@@ -128,9 +138,13 @@ ankka services apply -f ankka-reasoning-<version>-service.json -p reasoning
 ankka services list -p reasoning
 ```
 
-It needs nothing else set. Its database and its HTTP port are ankka's, supplied by the platform.
+It needs nothing else set to hold records and answer. Its database and its HTTP port are ankka's,
+supplied by the platform. When it starts it registers the appraiser with ankka's agent runtime, the
+holders the appraiser may be run for, and the golden set's sources, each a repeat after the first
+start; an appraiser ankka refuses stops the service from starting.
 [Configuration](../reference/configuration.md) lists every setting, among them `REASONING_STEWARDS`,
-the writers who may withdraw the text of any record.
+the writers who may withdraw the text of any record, `REASONING_APPRAISER_HOLDERS`, the holders, and
+`REASONING_GOLDEN_SET`, a directory of documents in the golden set's shape.
 
 ## Let people write through the gateway
 
@@ -179,4 +193,6 @@ has crossed the service, the installation's Kafka, the sink and Neo4j.
 | `/graph/wait` answers `503` with `graph.unavailable` | no broker or no graph database is set for the service |
 | `/graph/wait` answers `caughtUp: false` and names what is missing | the sink is not running, is behind, or cannot reach Neo4j; `ankka services get reasoning-graph-sink` says which. The record is held all the same |
 | every `/answers` route answers `503` | the service cannot reach Neo4j with the address and credentials it was given |
+| every run ends `failed` with a reason naming `ANTHROPIC_API_KEY` or `TYPESAFE_API_KEY` | the key is not set in the service's environment; see [Live, against a real model](live.md) |
+| the service does not start and names the appraiser | ankka refused the blueprint at registration; the build checks this, so it points at a mismatch between the image and the `runtime` it names |
 | withdrawn text stays in the log past a day | the topic was not declared compacted before the service first published |

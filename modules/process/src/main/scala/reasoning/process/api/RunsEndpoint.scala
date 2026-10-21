@@ -28,8 +28,10 @@ final class RunsEndpoint(
 
   postBody("/") { (request: StartRun) =>
     Replies.handle {
+      // The blueprint first, on its own: the input shape is the blueprint's, and there is none to
+      // check against when the service carries no such blueprint.
+      Rules.require(ProcessRules.blueprintNotHeld(request.blueprint, starter.carried.keySet))
       Rules.require(
-        ProcessRules.blueprintNotHeld(request.blueprint, starter.carried.keySet),
         Rules.id("run", request.runId, Ids.RunIdLimit),
         ProcessRules.runIdFormat(request.runId),
         starter

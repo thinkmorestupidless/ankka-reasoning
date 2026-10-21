@@ -10,7 +10,7 @@ mostly knowing which of the two a symptom belongs to, and that the copy can alwa
 
 | Store | Holds | If it is lost |
 |---|---|---|
-| the service's Postgres database | every record; the only place a rule is checked against | the records are lost; back it up as any ankka service's database |
+| the service's Postgres database | every record; the only place a rule is checked against; and ankka's own records of the blueprint, its versions and its runs | the records are lost; back it up as any ankka service's database |
 | the delta topic `reasoning-graph` | the latest delta for every node and edge, compacted | the graph can no longer be rebuilt, though the records are intact |
 | the graph database, Neo4j | a copy of the topic | nothing: rebuild it |
 
@@ -45,7 +45,9 @@ On a cluster the steps are the same: empty the database, or point the sink at an
 describes it.
 
 A rebuilt graph holds the latest state of every element and nothing older, so text withdrawn before
-the rebuild is not in it.
+the rebuild is not in it. The process layer is rebuilt with the rest: after the golden set's four
+runs, the rebuilt graph answered what a run wrote, and the comparison of the two holders with the
+acts behind each, the same as before.
 
 ## How long a record takes to reach the graph
 
@@ -71,6 +73,13 @@ fifteen seconds. The command exits `1` when nine in ten records take longer than
 explanation takes longer than one, so it can be a check after a change.
 
 A writer that must read its own write from the graph does not sleep; it asks `POST /graph/wait`.
+
+`just measure-golden-set` times the appraiser's four runs over [the golden set](../build/golden-set.md)
+the same way: each run, each record it wrote from the run's end to the graph holding the record and
+its act, and the whole set to the two holders compared from the graph. It needs a service with a
+model; with the scripted one the build uses, nine in ten records were in the graph with their acts
+within 1.6 seconds of their run's end and the whole set took 8.5 seconds. It exits `1` past five
+seconds for nine in ten or two minutes for the whole.
 
 ## What withdrawing text removes, and when
 
@@ -103,6 +112,9 @@ Each failure belongs to one store, and a write is affected only by the first.
 | `/answers` routes answer `503` with `graph.unavailable` | whether the service can reach Neo4j; a read gives up after five seconds |
 | answers are missing recent records | the sink is behind; `/graph/wait` on the record says what is missing |
 | the service logs `no broker is set (ANKKA_KAFKA_BOOTSTRAP_SERVERS), so the graph is not published` once at start | no broker is configured; records are held and nothing is published |
+| a run ends `failed` and its `reason` names a key | `ANTHROPIC_API_KEY` or `TYPESAFE_API_KEY` is not set for the service; [Live, against a real model](live.md) |
+| a run ends `failed` and its `reason` names a claim | the critique found a claim that does not derive from a document of the tranche; the records before the verdict are held with their acts, and the belief was not revised |
+| a run has ended and `GET /process/runs/{run}` lists fewer acts than it wrote | the acts' view is a moment behind; read it again |
 
 With no broker set the service still starts, holds records and returns them, and `/graph/wait`
 answers `503`. With no graph database set, or one that cannot be reached, every route that reads it

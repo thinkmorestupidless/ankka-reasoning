@@ -15,10 +15,12 @@ it stood on any past day, and set beside a belief that disagrees with it.
 
 **Documentation: [reasoning.ankka.cloud](https://reasoning.ankka.cloud/).**
 
-**The first feature is built.** The belief layer and the market layer are recorded, published to
-the graph and explained, with every scenario under [`features/`](features) run by a test. No agent
-writes to it yet: records come from a person, a script or a test. It is unreleased and runs on a
-laptop; see [Running it](#running-it).
+**Two features are built.** The belief layer and the market layer are recorded, published to the
+graph and explained; and the process layer records how: the service carries one blueprint, the
+appraiser, runs it on ankka's agent runtime, and holds every record a run writes with the act
+that says which run, step and worker wrote it. Every scenario under [`features/`](features) is run
+by a test. Release 0.1.1 carries the first feature; the process layer runs from the repository
+until the next. See [Running it](#running-it).
 
 ## The problem
 
@@ -49,9 +51,9 @@ problem unless its reasoning is recorded as it happens.
 ankka-reasoning records the reasoning as it is stated, checks it, and keeps it as a graph that can
 be asked those three questions.
 
-![How ankka-reasoning works. Writers, a person, a script or a test and later agents, send records to the ankka-reasoning service, which runs in an ankka project. Inside the service, Records holds one entity per record, never edited, and checks every rule against the service's own records; every record is kept in the service's Postgres database. Each change goes to the graph consumers, one per kind of record, which turn each record into a node and each link it stated into an edge and publish them as graph deltas to a compacted delta topic in Kafka under the contract ankka.graph-delta.v1. The graph sink, a second service in the same project that runs ankka's graph sink over ankka-contrib's Neo4j store, reads the topic and merges each delta into the graph database, Neo4j, which is a copy that can be emptied and rebuilt from the topic alone. Readers ask the service's Answers, which query the graph database, read only, and reply with records only. A write never waits for the graph.](docs/assets/diagrams/architecture.svg)
+![How ankka-reasoning works. Writers, a person, a script or a test, send records to the ankka-reasoning service, which runs in an ankka project; and a run of the appraiser blueprint, hosted by the service on ankka's agent runtime, writes records through its tools, each with an act. Inside the service, Records holds one entity per record, never edited, and checks every rule against the service's own records; every record is kept in the service's Postgres database. Each change goes to the graph consumers, one per kind of record, which turn each record into a node and each link it stated into an edge and publish them as graph deltas to a compacted delta topic in Kafka under the contract ankka.graph-delta.v1. The graph sink, a second service in the same project that runs ankka's graph sink over ankka-contrib's Neo4j store, reads the topic and merges each delta into the graph database, Neo4j, which is a copy that can be emptied and rebuilt from the topic alone. Readers ask the service's Answers, which query the graph database, read only, and reply with records only. A write never waits for the graph.](docs/assets/diagrams/architecture.svg)
 
-It is an ankka application with three parts:
+It is an ankka application with four parts:
 
 - **Records.** Each question, piece of evidence, claim and belief revision is an ankka entity. A
   writer sends a record; the service checks it against the records it already holds and either
@@ -62,9 +64,16 @@ It is an ankka application with three parts:
   compacted topic, and ankka's [graph sink](https://docs.ankka.cloud/deploy/graph-sink/), run from
   [ankka-contrib](https://github.com/thinkmorestupidless/ankka-contrib)'s Neo4j image, applies them
   to Neo4j. The graph database is a copy: it can be emptied and rebuilt from the topic alone.
+- **Runs.** The service hosts a blueprint, the appraiser, on ankka's
+  [agent runtime](https://docs.ankka.cloud/build/blueprints/): two workers, six steps, a critique
+  that can fail the run. Its workers write through three tools the service gives it, each tool
+  writing a record under the same rules as a request would and then the record's act: which run,
+  of which version of the blueprint, in which step, as which worker. A record a person wrote has
+  no act.
 - **Answers.** A reader asks why a belief changed, what the case for a hypothesis is, what was
   believed as of a date, or where two holders differ. Each answer is a walk of the graph and is
-  made of records only. No sentence is written for the occasion.
+  made of records only. No sentence is written for the occasion. Every answer can be asked with the
+  acts behind it, and one more says what a run wrote.
 
 ## What the graph holds
 
@@ -76,10 +85,11 @@ The vocabulary is in layers, and each layer can be used without the ones above i
 |---|---|---|
 | Belief | question, hypothesis, holder, source, evidence, claim, belief revision | Reasoning about anything not yet known. It names nothing of markets. |
 | Market | market, resolution | A question that is traded. The market is a holder too, and each price observation is its belief revision. |
-| Process | goal, task, worker and the calls they made | How the reasoning was carried out, so it can be replayed. A later feature. |
+| Process | blueprint version, run, run ending, act | Which run of which version of a blueprint wrote a record, in which step, as which worker. Drawn on [its own page](docs/concepts/process-layer.md). |
 
 Reading the picture from a belief revision outwards gives the trace that makes a belief auditable:
-the claims it rests on, the evidence each derives from, and the source of that evidence.
+the claims it rests on, the evidence each derives from, and the source of that evidence. One step
+further, through the act, is the run that wrote it and the instructions it followed.
 
 ## How it stays right
 
@@ -99,6 +109,9 @@ Five rules do most of the work. Each one removes a problem instead of handling i
   service's own records. The graph database is always a moment behind, so it is only ever read.
 - **Answers are records.** An explanation contains the claims, evidence and sources that are held
   and nothing else, so it can be checked against the graph by anyone.
+- **A record has one act, written with it.** A tool writes the record, then its act, and answers
+  the model only after both; a refused record leaves nothing. A record keeps its first act, so the
+  answer to what a run wrote is exact.
 
 ## An example
 
@@ -153,17 +166,18 @@ the sink.
 
 | | |
 |---|---|
-| [`specs/001-belief-layer/`](specs/001-belief-layer) | The first feature: its spec, plan, contracts, and in `research.md` every decision and what building it found. |
-| [`features/`](features) | What the service does, as scenarios in four areas: `record`, `graph`, `explain`, `market`. The spec names them and a suite runs each. |
+| [`specs/001-belief-layer/`](specs/001-belief-layer), [`specs/002-process-layer/`](specs/002-process-layer) | The two features: each its spec, plan, contracts, and in `research.md` every decision and what building it found. |
+| [`features/`](features) | What the service does, as scenarios in five areas: `record`, `graph`, `explain`, `market`, `process`. The specs name them and a suite runs each. |
 | [`GLOSSARY.md`](GLOSSARY.md) | The words the scenarios use, each in one sense. |
 | [`modules/graph`](modules/graph) | The vocabulary as a value, the only way to build an element, and the reader of the graph database. |
 | [`modules/belief`](modules/belief) | The belief layer: its records as ankka entities, its rules, its graph consumers, its answers and its routes. It names nothing of markets, and the build holds it to that. |
 | [`modules/market`](modules/market) | The market layer, built on the belief layer and changing nothing in it. |
-| [`modules/service`](modules/service) | The one deployable: both layers composed, and the suites that run the features. |
-| [`modules/seed`](modules/seed), [`seed/`](seed) | A client of the service: the worked example and a generated set of ten questions as seed files, and the tool that measures. |
+| [`modules/process`](modules/process), [`golden-set/`](golden-set) | The process layer: acts, runs, versions, the three tools, the appraiser as data, and the golden set of eight documents it is proved against. |
+| [`modules/service`](modules/service) | The one deployable: the three layers composed, the providers read from the environment, and the suites that run the features. |
+| [`modules/seed`](modules/seed), [`seed/`](seed) | A client of the service: the worked example and a generated set of ten questions as seed files, and the tools that measure. |
 | [`deploy/`](deploy), [`docker-compose.yml`](docker-compose.yml) | The service's and the graph sink's descriptors for a cluster, and what stands in for a cluster on a laptop. |
 | [`docs/`](docs), [`mkdocs.yml`](mkdocs.yml) | The documentation, published at [reasoning.ankka.cloud](https://reasoning.ankka.cloud/) and rendered as an agent skill under [`marketplace/`](marketplace). Built by ankka's docs tool: `just docs`. |
-| [`.github/workflows/release.yml`](.github/workflows/release.yml) | What a `v*` tag publishes: the three layers to Maven Central, the service's image to `ghcr.io/thinkmorestupidless/ankka-reasoning`, the plugin to the ankka marketplace, and a release page. No version has been released yet. |
+| [`.github/workflows/release.yml`](.github/workflows/release.yml) | What a `v*` tag publishes: the four layer modules to Maven Central, the service's image to `ghcr.io/thinkmorestupidless/ankka-reasoning`, the plugin to the ankka marketplace, and a release page. Release 0.1.1 is the latest; it predates the process layer. |
 | [`notes/ankka-requests.md`](notes/ankka-requests.md) | What this application asks of ankka and its siblings, and what each request would remove here. |
 | [`CLAUDE.md`](CLAUDE.md) | The working rules for the repository and its commands. |
 
@@ -181,29 +195,46 @@ curl -s 'localhost:9000/answers/belief-change?from=agent-a.launch.1&to=agent-a.l
 ```
 
 The last answers with 0.38 and 0.61, the claim newly rested on with the regulator's notice and its
-source, and the earlier claim no longer rested on and revised by it. `just test` runs every suite;
-[`quickstart.md`](specs/001-belief-layer/quickstart.md) walks through what each tier proves and what
-was measured.
+source, and the earlier claim no longer rested on and revised by it.
+
+A run of the appraiser needs a model: `ANTHROPIC_API_KEY` and `TYPESAFE_API_KEY` in the environment
+of `just run`. With them, the golden set's four runs, two holders over two months with a second
+set of instructions for the second holder:
+
+```bash
+just seed golden-set         # the question, its sources and its market
+curl -s localhost:9000/process/runs -d '{"blueprint":"appraiser","runId":"appraiser-a-may","input":{"tranche":"may","holder":"appraiser-a","question":"launch","observedAt":"2026-05-31T09:00:00Z"}}'
+curl -s localhost:9000/process/runs/appraiser-a-may                     # until "ending" appears
+curl -s 'localhost:9000/process/answers/belief-change?from=appraiser-a-may.yes&to=appraiser-a-june.yes'
+just measure-golden-set      # the four runs timed: each record to the graph with its act, the whole set
+```
+
+Without the keys, every run ends `failed` naming the key, and everything else works. `just test`
+runs every suite, with a scripted model in place of the real one; the quickstarts of
+[the first feature](specs/001-belief-layer/quickstart.md) and
+[the second](specs/002-process-layer/quickstart.md) walk through what each tier proves and what was
+measured.
 
 ## What comes next
 
-The first feature has no agents in it. Records arrive from a person, a script or a test, which is
-enough to prove the model holds and explains reasoning whoever wrote it. What follows, in the order
-it is expected:
+The appraiser reads documents it is given and records which run wrote what; it gathers nothing,
+and the conversation that led to a record is not a record. What follows, in the order it is
+expected:
 
-1. Agents as writers: one that gathers evidence and one that forecasts, with every model call
-   recorded.
-2. The process layer: goals, tasks and workers, so a session of reasoning can be replayed.
+1. A release carrying the process layer, and the appraiser proved against a real model over
+   repeated runs rather than once.
+2. Blueprints that gather evidence from outside the golden set, and more than one of them.
 3. Beliefs that know when to think again: a belief resting on a revised claim is marked and
    revisited.
-4. Scoring: once a market resolves, which holders and which evidence were worth listening to.
+4. Scoring: once a market resolves, which holders, which evidence and which version of the
+   instructions were worth listening to.
 
 ## Beside ankka and ankka-contrib
 
 ankka-reasoning is an application of ankka and part of neither. ankka supplies the entities, the
-graph consumers, the delta contract, the graph sink and, later, the agents. ankka-contrib supplies
-the Neo4j store the sink writes through, as a ready image. What this project finds missing in either
-becomes a request to it.
+graph consumers, the delta contract, the graph sink, and the agent runtime that holds the blueprint
+and runs it. ankka-contrib supplies the Neo4j store the sink writes through, as a ready image. What
+this project finds missing in either becomes a request to it.
 
 ## Licence
 

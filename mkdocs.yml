@@ -4,7 +4,7 @@
 # docs-index.json and the agent skill — is rendered from the same tree by
 # `uv run --project tools/docs docs build`. See docs/contributing/documentation.md.
 site_name: ankka-reasoning
-site_description: A reasoning graph on ankka — evidence, claims, hypotheses and beliefs as records that are never edited, published to a graph database, so any belief can be traced to its sources and read back as it stood on any past day.
+site_description: A reasoning graph on ankka — evidence, claims, hypotheses and beliefs as records that are never edited, published to a graph database, so any belief can be traced to its sources, to the run of the blueprint that wrote it, and read back as it stood on any past day.
 site_url: https://reasoning.ankka.cloud/
 repo_url: https://github.com/thinkmorestupidless/ankka-reasoning
 repo_name: thinkmorestupidless/ankka-reasoning
@@ -97,6 +97,7 @@ nav:
       - Nothing is edited: concepts/nothing-is-edited.md
       - Two times on every record: concepts/two-times.md
       - Layers and the vocabulary: concepts/layers.md
+      - The process layer: concepts/process-layer.md
       - Writers, holders and stewards: concepts/writers-and-holders.md
   - Build:
       - Record reasoning: build/record-reasoning.md
@@ -105,9 +106,13 @@ nav:
       - Withdraw text: build/withdraw-text.md
       - Read the graph: build/read-the-graph.md
       - Seed files: build/seed-files.md
+      - Run a blueprint: build/run-a-blueprint.md
+      - The appraiser: build/the-appraiser.md
+      - The golden set: build/golden-set.md
   - Deploy and operate:
       - Deploy on ankka: deploy/deploy-on-ankka.md
       - Operate the service: deploy/operate.md
+      - Live, against a real model: deploy/live.md
   - Reference:
       - HTTP API: reference/http-api.md
       - Refusals: reference/refusals.md

@@ -108,6 +108,11 @@ curl -s localhost:9000/sources -d '{ "id": "regulator", "name": "the regulator" 
 {"id":"regulator","name":"the regulator","dated":"2026-10-06T12:11:18.441Z","recordedAt":"2026-10-06T12:11:18.441Z","writer":"local"}
 ```
 
+These two sources are also among the six the service registers itself when it starts, for
+[the appraiser](the-appraiser.md) to record evidence from. Against a service that has started with
+them, each of the two requests answers `200` with the source as held, its `writer` the service,
+and nothing is recorded twice; the rest of this page is the same either way.
+
 ## Record evidence
 
 Evidence is a passage from a source: where it is (`locator`), what it says (`excerpt`), and when it was

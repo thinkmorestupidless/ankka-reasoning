@@ -3,7 +3,7 @@ title: Layers and the vocabulary
 description: How the graph's vocabulary is divided into a belief layer, a market layer and a process layer, what a layer may and may not do, and how the vocabulary is enforced.
 kind: concept
 layers: [belief, market, process]
-related: [concepts/records-and-links.md, reference/graph-vocabulary.md, build/read-the-graph.md]
+related: [concepts/records-and-links.md, concepts/process-layer.md, reference/graph-vocabulary.md, build/read-the-graph.md]
 ---
 
 # Layers and the vocabulary
@@ -20,10 +20,13 @@ process layer's kinds are in the [graph vocabulary](../reference/graph-vocabular
 |---|---|---|
 | belief | question, hypothesis, holder, source, evidence, claim, belief revision, and the eleven kinds of edge between them | reasoning about anything not yet known |
 | market | market and resolution, seven kinds of edge that leave them, and the holder kind `market` | a question that is traded |
+| process | blueprint version, run, run ending and act, and five kinds of edge that leave them | how a record came to be written: by which run of which blueprint version, in which step, as which worker |
 
 The belief layer names nothing of markets. It has no outcome, no price and no venue, and it would
 serve a forecaster with no market in sight, or any other domain where beliefs rest on claims and
-claims on evidence.
+claims on evidence. Neither of the two beneath names anything of runs: a record written by a person
+and one written by a run of a blueprint are the same kind of record, and the process layer says
+afterwards which was which. [The process layer](process-layer.md) is its own page.
 
 ## What a layer may do
 
@@ -36,9 +39,15 @@ not mark a hypothesis as true; it states an edge, `RESOLVES_TO`, from itself to 
 every answer the belief layer gives works on a market's beliefs unchanged, and a graph with the market
 layer's nodes removed is a complete belief-layer graph.
 
+The process layer keeps to it the same way. An act is a node of its own with an edge, `WROTE`, to the
+record it names; the record gains no property and states no edge back. A run writes as a holder of
+the belief layer's, and the layer adds no kind of holder.
+
 This is held by the build, not by convention. The belief layer's code is a module that does not depend
-on the market layer's, so a market word in it does not compile, and the service's test suite runs the
-belief layer's scenarios against a service with no market layer in it.
+on the market layer's, and neither depends on the process layer's, so a market word in the belief layer
+or a process word in either does not compile. The service's test suite runs the belief layer's
+scenarios against a service with no market layer in it, and every scenario of both against a service
+with no process layer.
 
 ## The vocabulary is a value
 
@@ -77,8 +86,9 @@ curl -s localhost:9000/graph/vocabulary | python3 -m json.tool
 }
 ```
 
-The reply is an excerpt: one kind of node and one of edge from the first layer. A reader who has this
-page of JSON can write any query against the graph without reading the service's code.
+The reply is an excerpt: one kind of node and one of edge from the first layer; the reply has three
+layers, `belief`, `market` and `process`. A reader who has this page of JSON can write any query
+against the graph without reading the service's code.
 [Graph vocabulary](../reference/graph-vocabulary.md) is the whole of it, and
 [Read the graph](../build/read-the-graph.md) uses it.
 
@@ -102,16 +112,18 @@ libraryDependencies += "com.thinkmorestupidless" %% "ankka-reasoning-belief" % "
 Each depends on the one before it, so naming the process layer brings all four. The service is the
 example of composing them:
 [`ReasoningService`](https://github.com/thinkmorestupidless/ankka-reasoning/blob/main/modules/service/src/main/scala/reasoning/service/Main.scala)
-adds the two layers' components and endpoints together and nothing else. Two things are the
-service's and are not in the libraries: the `/graph` routes, and the rule for who a caller is as a
-writer, which an application supplies as the `acl` it hands each layer.
+adds the three layers' components and endpoints together, registers the process layer's blueprints
+with ankka's agent runtime, and nothing else. Three things are the service's and are not in the
+libraries: the `/graph` routes, the rule for who a caller is as a writer, which an application
+supplies as the `acl` it hands each layer, and the model and judgment providers a run asks, read from
+the environment.
 
-No version has been released, so these are not on Maven Central yet;
-[Limitations](../reference/limitations.md) says so.
+The first three are on Maven Central from release 0.1.1; the process layer's module is published with
+the first release that carries it. [Limitations](../reference/limitations.md) says which that is.
 
-## Later layers
+## What the layers leave out
 
-A process layer is planned above these two: goals, tasks, workers and the calls they made, so that how
-a piece of reasoning was carried out can be replayed. It does not exist yet, and nothing in the belief
-or market layer will change to make room for it. [Limitations](../reference/limitations.md) lists what
-else is not there.
+The process layer records which run wrote a record, and not the conversation that led to it: no
+goal, no task, no model call and no session is a record. Scoring, which would set a version or a
+holder against the outcome a market resolved to, is above all three and is not built.
+[Limitations](../reference/limitations.md) lists what else is not there.

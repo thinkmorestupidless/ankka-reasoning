@@ -2,7 +2,7 @@
 title: Run it on your machine
 description: Start the ankka-reasoning service on a laptop with Postgres, Kafka, the graph sink and Neo4j beside it, and check that a record reaches the graph.
 kind: tutorial
-related: [get-started/first-explanation.md, reference/configuration.md, deploy/operate.md]
+related: [get-started/first-explanation.md, build/golden-set.md, deploy/live.md, reference/configuration.md, deploy/operate.md]
 ---
 
 # Run it on your machine
@@ -72,6 +72,12 @@ The service is up when it has started its graph consumers, one per kind of recor
 INFO  o.a.p.p.ProjectionBehavior$ - Starting projection [ProjectionId(ankka-consumer-claim-graph, 0-255)]
 ```
 
+As it starts it also registers the appraiser, the blueprint it carries, with ankka's agent runtime,
+and the holders and sources the appraiser writes with. A run of the appraiser needs a model and a
+judgment, from `ANTHROPIC_API_KEY` and `TYPESAFE_API_KEY` in the environment of `just run`; without
+them everything else works and a run fails at its first model call, naming the key.
+[Live, against a real model](../deploy/live.md) has both.
+
 ## Check it
 
 The vocabulary route needs nothing recorded and answers as soon as the service is up:
@@ -122,5 +128,6 @@ just down
 ## Where to go from here
 
 [Your first explanation](first-explanation.md) records the launch example and asks why a belief
-changed. [Operate the service](../deploy/operate.md) rebuilds the graph database from the topic and
-measures how long a record takes to reach it.
+changed. [The golden set](../build/golden-set.md) has the appraiser read eight documents and asks
+the same question with the runs behind the answer. [Operate the service](../deploy/operate.md)
+rebuilds the graph database from the topic and measures how long a record takes to reach it.

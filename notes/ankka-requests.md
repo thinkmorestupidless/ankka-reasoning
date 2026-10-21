@@ -1,9 +1,10 @@
 # Requests to ankka, ankka-flow and ankka-contrib
 
 What this application would like from the platform it is built on. Each says what is done here
-today and what the request would remove. None blocks the belief layer; the reasons are in
-[`specs/001-belief-layer/research.md`](../specs/001-belief-layer/research.md), by the number in
-brackets.
+today and what the request would remove. None blocks the belief layer or the process layer; the
+reasons are in [`specs/001-belief-layer/research.md`](../specs/001-belief-layer/research.md) and
+[`specs/002-process-layer/research.md`](../specs/002-process-layer/research.md), by the number in
+brackets (R for a decision, F or V for what building it found).
 
 Nothing here reaches into the platform's tables or internals to get round a gap. Where a gap could
 not wait, the way round is in this repository's own code and named below.
@@ -105,6 +106,57 @@ ask judgments, and runs started by a request, a schedule or a record. Specified 
 **Would remove.** Everything this repository would otherwise need to run a pattern. What stays here
 is the projection of runs into the graph and the tools that write reasoning records.
 
+**Answered** by ankka `0.12.0` (2026-10-14): blueprints as data, versioned by digest; workers whose
+instructions, tools and budget are the blueprint's; call, ask, judge and for-each steps; runs
+started by a request and held as ankka's own records; `RunContext` for a tool. The process layer
+(spec 002) hosts the appraiser on it and keeps exactly what this said would stay: the runs copied
+into the graph, and the three tools that write records. What the blueprints lack is 14 to 17 below.
+
+### 14. The worker in `RunRef` (spec 002, R9)
+
+**Today.** `RunRef` names the run, the step, the blueprint and the version, and no worker. An act
+has to name the worker that wrote the record, so a tool looks the step up in the blueprint version
+the run names and takes its action's worker; a step with no single worker (a gather over several,
+a judge or a call step) is refused with `act.worker.unknown` and the tool writes nothing.
+
+**Asked.** The worker in `RunRef`, where the step has one.
+
+**Would remove.** `RunResolver`'s lookup of the version and its cache of versions, and the refusal.
+
+### 15. Tools with more than three parameters, or an object parameter (spec 002, R11)
+
+**Today.** `FunctionTool` takes at most three parameters, each a string, a number, a flag, an
+option or a list. `record_evidence` therefore takes a document id, an excerpt and an author, and
+reads the source, the locator and the published time from the document in the run's tranche; the
+belief layer's route takes all five.
+
+**Asked.** More parameters, or a parameter that is an object with a shape.
+
+**Would remove.** The tool's dependence on the golden set for provenance: it could take the
+route's fields and record evidence from any document a worker was given.
+
+### 16. A tool that fails its run with a reason (spec 002, R12)
+
+**Today.** A tool answers a value or a refusal, and the run goes on. The critique's verdict is a
+call step after the judge step, whose handler throws naming the first claim the judgment refused,
+and the run ends `failed` with that reason. A judgment names no claim, so the handler pairs each
+judgment with the reader's item by position.
+
+**Asked.** A way for a tool, or a judge step, to fail the run with a reason where the fault is
+found.
+
+**Would remove.** The `critique-verdict` handler, and the pairing by position.
+
+### 17. A judgment provider over a text model, or a model provider that judges (spec 002, R15)
+
+**Today.** ankka's judgments come from Jev and its text from Anthropic, each with a key of its own,
+so the live suite needs `ANTHROPIC_API_KEY` and `TYPESAFE_API_KEY` both and is skipped unless both
+are set.
+
+**Asked.** A judgment provider that asks a text model the question, so one key serves.
+
+**Would remove.** The second key, and half of `LiveFixture.keysSet`.
+
 ### 19. A run's start answers the run as started (spec 002, V6)
 
 **Today.** `agents.runs.start` answers a first start with the run entity's state from before its
@@ -118,17 +170,22 @@ repeated start already does.
 
 **Would remove.** The read back after every start, and a trap for every service that starts runs.
 
-## To ankka-flow
+## To ankka's graph sink, and ankka-contrib
 
-### 6. Ask whether a set of elements has been applied (R10)
+### 6. Ask whether a set of elements has been applied (spec 001 R10; now of ankka's graph sink)
 
-**Today.** `/graph/wait` polls the graph database for the version of each element a record
-published, every 100 ms, until all are there or the limit passes.
+**Today.** The graph is kept by ankka's graph sink in ankka-contrib's Neo4j image, and
+`/graph/wait` polls the graph database for the version of each element a record published, every
+100 ms, until all are there or the limit passes. The process layer adds acts and runs to what a
+reader waits for, and `just measure-golden-set` polls the run's answer from the graph for its acts.
 
-**Asked.** A way to ask the sink, or the graph, whether a set of element keys has been applied at a
-version.
+**Asked.** A way to ask the sink, or the graph store, whether a set of element keys has been applied
+at a version: a route on the sink, or a watermark the store keeps.
 
-**Would remove.** The polling loop in `GraphEndpoint`, and `GraphReader.versionsOf`.
+**Would remove.** The polling loop in `GraphEndpoint`, `GraphReader.versionsOf`, and the poll in
+the measurement.
+
+## To ankka-flow (moot: the sink is ankka's, in ankka-contrib's image)
 
 ### 7. A documented way to run a sink-only pipeline without Kubernetes (R7)
 
@@ -142,6 +199,10 @@ and creates its topics as the operator would.
 **Would remove.** `compose/flow-graph`, the `topic` service, and the same again in the test
 fixture (`GraphFixture.sinkFiles`).
 
+**Moot** since spec 002 (2026-10-18): the graph is kept by ankka's graph sink in ankka-contrib's
+image, which `docker-compose.yml` and the test fixture run as one container with its environment.
+The `topic` service stays: ankka creates no topics, and a compacted one has to exist first.
+
 ### 12. Notes on standard error when the resource goes to standard output (F19)
 
 **Today.** `flow generate … | kubectl apply -f -` is refused by `kubectl` for an unknown field
@@ -151,6 +212,9 @@ The deploy page writes the resource to a file first.
 **Asked.** Notes and other messages on standard error, whatever `-o` is.
 
 **Would remove.** The file, and the sentence explaining it.
+
+**Moot** since spec 002: nothing of ankka-flow is generated or applied; the sink is a service
+descriptor, `deploy/graph-sink.json`, applied with `ankka services apply`.
 
 ## A release
 

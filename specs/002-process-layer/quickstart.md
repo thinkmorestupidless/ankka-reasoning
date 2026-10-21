@@ -92,16 +92,18 @@ just seed golden-set         # the question, its sources, the market
 With keys set in the environment (or skip to the scripted run below):
 
 ```bash
-curl -s localhost:9000/process/runs -d '{"blueprint":"appraiser","runId":"appraiser-a-may","input":{"tranche":"may","holder":"appraiser-a","question":"launch","observedAt":"2026-05-20T09:00:00Z"}}'
+curl -s localhost:9000/process/runs -d '{"blueprint":"appraiser","runId":"appraiser-a-may","input":{"tranche":"may","holder":"appraiser-a","question":"launch","observedAt":"2026-05-31T09:00:00Z"}}'
 curl -s localhost:9000/process/runs/appraiser-a-may          # until "ending" appears
-curl -s localhost:9000/process/runs -d '{"blueprint":"appraiser","runId":"appraiser-a-june","input":{"tranche":"june","holder":"appraiser-a","question":"launch","follows":"appraiser-a-may.yes","observedAt":"2026-06-20T09:00:00Z"}}'
+curl -s localhost:9000/process/runs -d '{"blueprint":"appraiser","runId":"appraiser-a-june","input":{"tranche":"june","holder":"appraiser-a","question":"launch","follows":"appraiser-a-may.yes","observedAt":"2026-06-30T09:00:00Z"}}'
 curl -s localhost:9000/graph/wait -d '{"kind":"revision","id":"appraiser-a-june.yes"}'
 curl -s 'localhost:9000/process/answers/belief-change?from=appraiser-a-may.yes&to=appraiser-a-june.yes'
 ```
 
-Expect a probability below one half then above it; the claim derived from the approval document
-newly rested on, with its evidence and source; and in `acts` that claim's act naming the step
-`read`, the worker `reader`, the run `appraiser-a-june` and version 1.
+Expect a probability below one half then above it; the three June claims newly rested on, the
+approval's among them, each with its evidence and source, and the five May claims no longer rested
+on; and in `acts` the approval claim's act naming the step `read`, the worker `reader`, the run
+`appraiser-a-june` and version 1. The June tranche is observed on 30 June because its rumour was
+published on 20 June at 22:00, and evidence observed before it was published is refused.
 
 Then version 2 for the second holder, and the comparison:
 
@@ -111,8 +113,9 @@ curl -s localhost:9000/process/appraiser/versions -d '{"instructions":"v2"}'
 curl -s 'localhost:9000/process/answers/comparison?hypothesis=launch/yes&a=appraiser-a&b=appraiser-b'
 ```
 
-Expect the same claims under `both` with two weights, nothing under `onlyA` or `onlyB`, and in
-`acts` version 1 behind one holder's revision and version 2 behind the other's.
+Expect `both` empty, each holder's three June claims under `onlyA` and `onlyB` (a claim is one
+holder's; the two share the evidence, not the claims), `difference` the gap the two instruction
+sets make, and in `acts` version 1 behind one holder's revision and version 2 behind the other's.
 
 Read the trace straight from the graph database:
 
@@ -160,13 +163,13 @@ Proves: US4, each run once. SC-007's nine in ten: run it ten times and record th
 
 ## Reviewer's checklist
 
-- [ ] Tiers 0 to 3 pass from a clean checkout with `sbt test`; `LiveAppraiserSuite` is reported skipped.
-- [ ] Every scenario under `features/` is run by exactly one suite; none is ignored.
-- [ ] Each "to see it can fail" above was tried once and went red.
-- [ ] Tier 4's answers match the golden set's expected readings, value for value.
-- [ ] The measurements for SC-006, SC-007 and SC-009 are recorded at the end of `research.md`.
-- [ ] Every item in `research.md`'s "Verify first" has an outcome beside it.
-- [ ] `notes/ankka-requests.md` marks 8, 9 and 13 answered or moot and holds 14 to 17.
+- [x] Tiers 0 to 3 pass from a clean checkout with `sbt test`; `LiveAppraiserSuite` is reported skipped (2026-10-21, below).
+- [x] Every scenario under `features/` is run by exactly one suite; none is ignored (`just features`: 0 findings in 155 scenarios; `sbt test` reports 0 ignored).
+- [x] Each "to see it can fail" above was tried once and went red (research V-outcomes and F-findings of the phase that built each).
+- [x] Tier 4's answers match the golden set's expected readings, value for value: under the scripted model in `GoldenSetFeatures` and `DocsCaptureSuite`, whose replies are on the pages; by hand on a laptop, not run (research F-ac).
+- [x] The measurements for SC-006 and SC-009 are recorded at the end of `research.md`; SC-007's ten live runs are recorded there as not run, no key being available.
+- [x] Every item in `research.md`'s "Verify first" has an outcome beside it.
+- [x] `notes/ankka-requests.md` marks 8, 9 and 13 answered or moot and holds 14 to 17.
 
 ## What was run
 
@@ -181,3 +184,17 @@ Proves: US4, each run once. SC-007's nine in ten: run it ten times and record th
   reports 1 passed, 3 skipped, 0 failed: the suite's test and the feature's two scenarios with a
   key are skipped, and the scenario without a key, which runs the suite with an empty environment,
   passes. Tier 6 with the keys, ten times for SC-007: not yet run.
+- 2026-10-21, laptop (Apple silicon, Docker), Phase 7. Tier 4 by hand was not run: `just up` binds
+  Kafka on 9094 and Neo4j on 7687, which another project's kind cluster held that day (research
+  F-ac). In its place `DocsCaptureSuite`, with `REASONING_CAPTURE_DIR` set, ran tier 4's requests
+  against the graph fixture's service with the scripted model and wrote every reply the new pages
+  show; `GoldenSetMeasureSuite` ran `measure-golden-set` the same way (SC-006 8.5 s, SC-009 nine
+  in ten within 1.6 s; research Measurements); `ServiceStartsSuite` started a run with no key and
+  read its ending, `failed` naming `ANTHROPIC_API_KEY`. Tier 5 was not run: the `kind-ankka`
+  cluster was down. Tier 6 with the keys: not run, no key available. `just features`: 0 findings in
+  155 scenarios and 2 specs. `just docs` built every page. `sbt clean scalafmtCheckAll test`
+  ran 373 tests in 14 min 26 s: 362 passed, 4 skipped (the live suite's test, the live feature's
+  two keyed scenarios, the docs capture), 7 failed, every one a thirty-second `/graph/wait` after a
+  rebuild answered by Pekko HTTP's twenty-second request timeout (research F-ae); the three suites
+  passed alone, a second full run failed one the same way, and after the timeout was raised
+  `sbt scalafmtCheckAll test` passed 369 with the same 4 skipped in 7 min 33 s.

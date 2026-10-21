@@ -15,13 +15,17 @@ up:
 down:
     docker compose down -v
 
-# Post seed/<name>.json to a running service.
+# Post seed/<name>.json, or golden-set/seed.json for `golden-set`, to a running service.
 seed name url="http://localhost:9000":
-    sbt "seed/runMain reasoning.seed.Seed seed/{{name}}.json {{url}}"
+    sbt "seed/runMain reasoning.seed.Seed {{name}} {{url}}"
 
-# Time to the graph and time to an answer, for SC-007.
+# Time to the graph and time to an answer, over the seeded set of 555 records.
 measure url="http://localhost:9000":
     sbt "seed/runMain reasoning.seed.Measure {{url}}"
+
+# The golden set's four runs of the appraiser, timed: each record to the graph with its act, and the whole set to an answer. The service needs a model.
+measure-golden-set url="http://localhost:9000":
+    sbt "seed/runMain reasoning.seed.MeasureGoldenSet {{url}}"
 
 # Write seed/ten-questions.json again from its generator.
 generate:

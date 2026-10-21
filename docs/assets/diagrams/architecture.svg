@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" role="img" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" aria-labelledby="title desc">
   <title id="title">How ankka-reasoning works</title>
-  <desc id="desc">Writers, a person, a script or a test and later agents, send records to the ankka-reasoning service, which runs in an ankka project. Inside the service, Records holds one entity per record, never edited, and checks every rule against the service's own records; every record is kept in the service's Postgres database. Each change goes to the graph consumers, one per kind of record, which turn each record into a node and each link it stated into an edge and publish them as graph deltas to a compacted delta topic in Kafka under the contract ankka.graph-delta.v1. The graph sink, a second service in the same project that runs ankka's graph sink over ankka-contrib's Neo4j store, reads the topic and merges each delta into the graph database, Neo4j, which is a copy that can be emptied and rebuilt from the topic alone. Readers ask the service's Answers, which query the graph database, read only, and reply with records only. A write never waits for the graph.</desc>
+  <desc id="desc">Writers, a person, a script or a test, send records to the ankka-reasoning service, which runs in an ankka project; and a run of the appraiser blueprint, hosted by the service on ankka's agent runtime, writes records through its tools, each with an act. Inside the service, Records holds one entity per record, never edited, and checks every rule against the service's own records; every record is kept in the service's Postgres database. Each change goes to the graph consumers, one per kind of record, which turn each record into a node and each link it stated into an edge and publish them as graph deltas to a compacted delta topic in Kafka under the contract ankka.graph-delta.v1. The graph sink, a second service in the same project that runs ankka's graph sink over ankka-contrib's Neo4j store, reads the topic and merges each delta into the graph database, Neo4j, which is a copy that can be emptied and rebuilt from the topic alone. Readers ask the service's Answers, which query the graph database, read only, and reply with records only. A write never waits for the graph.</desc>
   <style>
     .bg { fill: #ffffff; }
     .ink { fill: #1f2328; }
@@ -46,8 +46,8 @@
   <!-- Writers and readers -->
   <rect class="box" x="24" y="120" width="180" height="92" rx="8"/>
   <text class="title ink" x="114" y="148" text-anchor="middle">Writers</text>
-  <text class="small muted" x="114" y="168" text-anchor="middle">a person, a script, a test</text>
-  <text class="small muted" x="114" y="184" text-anchor="middle">later, agents</text>
+  <text class="small muted" x="114" y="168" text-anchor="middle">a person, a script, a test,</text>
+  <text class="small muted" x="114" y="184" text-anchor="middle">or a run of a blueprint</text>
 
   <rect class="box" x="24" y="404" width="180" height="92" rx="8"/>
   <text class="title ink" x="114" y="432" text-anchor="middle">Readers</text>

@@ -110,12 +110,21 @@ object Seed:
     )
     Sent(path, response.statusCode, response.body)
 
+  /**
+   * A seed file by its path, or by its name: `launch-example` is `seed/launch-example.json`, and
+   * `golden-set` is `golden-set/seed.json`, the set's own directory.
+   */
+  def fileNamed(name: String): Path =
+    Vector(Paths.get(name), Paths.get("seed", s"$name.json"), Paths.get(name, "seed.json"))
+      .find(Files.isRegularFile(_))
+      .getOrElse(throw IllegalArgumentException(s"no seed file '$name'"))
+
   def main(args: Array[String]): Unit =
     if args.length < 1 then
-      System.err.println("usage: Seed <file> [base url]")
+      System.err.println("usage: Seed <file or name> [base url]")
       sys.exit(2)
     val baseUrl = if args.length > 1 then args(1) else "http://localhost:9000"
-    val sent    = run(Paths.get(args(0)), baseUrl)
+    val sent    = run(fileNamed(args(0)), baseUrl)
     sent.foreach(s => println(f"${s.status}%3d ${s.path}%-28s ${if s.refused then s.body else ""}"))
     val created = sent.count(_.created)
     println(s"${sent.size} sent, $created new, ${sent.count(_.status == 200)} already held")
