@@ -206,9 +206,12 @@ object GraphFixture:
         goldenSet = ServiceFixture.settings.goldenSet
       )
 
-  /** ankka's agents, hosting the appraiser, over this fixture's clock. */
+  /**
+   * ankka's agents, hosting the appraiser, over this fixture's clock. The providers are the
+   * scripted ones, or the real ones within a live run (`LiveFixture`).
+   */
   lazy val agents: AgentRuntime =
-    ReasoningService.agents(settings, ServiceFixture.model, ServiceFixture.judge, clock)
+    ReasoningService.agents(settings, LiveFixture.model, LiveFixture.judgments, clock)
 
   private lazy val started: (AnkkaTestKit, HttpServer) =
     createTopic()

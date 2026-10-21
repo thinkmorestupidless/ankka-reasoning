@@ -176,3 +176,8 @@ Proves: US4, each run once. SC-007's nine in ten: run it ten times and record th
   name the process layer, on unbound steps, as planned until T026 binds them. `scalafmtCheckAll`
   clean. On the laptop: `just up` with the contrib sink, the launch example seeded, `just rebuild`
   to version 2, the same answer (research V3).
+- 2026-10-20, laptop (Apple silicon, Docker), after Phase 6, tier 2 for the live suite:
+  `sbt 'service/testOnly *LiveAppraiserSuite *LiveFeatures'` with no key in the environment
+  reports 1 passed, 3 skipped, 0 failed: the suite's test and the feature's two scenarios with a
+  key are skipped, and the scenario without a key, which runs the suite with an empty environment,
+  passes. Tier 6 with the keys, ten times for SC-007: not yet run.
