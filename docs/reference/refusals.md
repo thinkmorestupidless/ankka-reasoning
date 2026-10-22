@@ -2,8 +2,8 @@
 title: Refusals
 description: Look up what the service answers when it does not accept a write or cannot answer a read, with the status and the name of every rule.
 kind: reference
-layers: [belief, market]
-related: [reference/http-api.md, build/record-reasoning.md, concepts/writers-and-holders.md]
+layers: [belief, market, process]
+related: [reference/http-api.md, build/record-reasoning.md, build/run-a-blueprint.md, concepts/writers-and-holders.md]
 ---
 
 # Refusals
@@ -44,11 +44,11 @@ value of the wrong type or a missing required query parameter, is ankka's own `4
 
 | Status | Means |
 |---|---|
-| `400` | The request could not be read. No `rule`. |
+| `400` | The request could not be read. No `rule`; except `record.format`, a `record` query that is not `<kind>:<id>`. |
 | `401` | The caller could not be identified as a writer: a caller through the gateway with no token, or one no issuer the service lists signed. |
-| `403` | The writer does not speak for the holder, or may not withdraw the record. |
-| `404` | A read, a wait or a withdrawal named a record that is not held. |
-| `409` | The identifier is held by a different record, or a revision or resolution does not follow the current one. |
+| `403` | The writer does not speak for the holder, or may not withdraw the record; or the blueprint does not speak for the holder a run would write as. |
+| `404` | A read, a wait or a withdrawal named a record that is not held, or a run named a blueprint the service does not carry. |
+| `409` | The identifier is held by a different record, a revision or resolution does not follow the current one, or a run id is held by a different run. |
 | `422` | The record, or the question asked, breaks a rule. |
 | `503` | A route that reads the graph database could not reach it. |
 
@@ -142,11 +142,48 @@ as any repeat does.
 | `market.resolution.dated.not-before-market` | 422 | The resolution is dated before its market. |
 | `market.resolution.revises.not-current` | 409 | `revises` is not the market's current resolution, or is left out when there is one, or is given when there is none. `names.current` gives the current resolution when there is one. |
 
+## Runs and versions
+
+| Rule | Status | When |
+|---|---|---|
+| `blueprint.not-held` | 404 | A run is started of a blueprint the service does not carry. Checked first: the input shape is the blueprint's. |
+| `run.id.too-long` | 422 | A run id is over 47 characters, or starts `schedule:`. `names.limit` gives the limit. |
+| `run.id.held-by-another` | 409 | The run id is held by a run of a different blueprint or with a different input. The same run sent again is not a refusal: it answers `200`. |
+| `run.input.invalid` | 422 | The input does not fit the blueprint's input shape. `names.field` gives the field. |
+| `holder.writer.does-not-speak` | 403 | The blueprint does not speak for the holder the input names. A holder that is not held is `record.not-held`. |
+| `appraiser.instructions.unknown` | 422 | `instructions` is not an instruction set the service carries. `names.instructions` gives what was sent. |
+| `run.not-held` | 422 | A run ending or an act names a run that is not held. The service's own consumers write both; it should not occur. |
+| `run-ending.dated.before-run` | 422 | A run ending is dated before its run. Should not occur. |
+| `blueprint-version.not-held` | 422 | A run names a blueprint version that is not held. Should not occur. |
+
+A run that fails is not a refusal. It is held with its ending, `status` `failed` and a `reason`:
+the claim its critique rejected, the refusal a worker met, or the model key it could not find.
+
+## Tools
+
+A tool a run calls is refused under every rule of this page its record can break, exactly as a
+writer sending the record would be, and under these of its own. The refusal is the tool's error,
+handed to the model with its `rule` and `names`; nothing is written.
+
+| Rule | Status | When |
+|---|---|---|
+| `tool.called-in-no-run` | 422 | A tool is called outside any run of a blueprint. |
+| `act.worker.unknown` | 422 | The step the tool is called in has no single worker. |
+| `document.not-in-tranche` | 422 | `record_evidence` names a document the run's tranche does not hold. |
+| `claim.stance.unknown` | 422 | A stance of `state_claim` is not `<question>/<hypothesis> supports` or `… contradicts`. |
+| `belief.rest.format` | 422 | A rest of `revise_belief` is not `<claim>` or `<claim>@<weight>`. |
+| `belief.rests-on.other-holder` | 422 | `revise_belief` names a claim another holder stated. A run's belief rests only on its own holder's claims. |
+| `act.record.not-held` | 422 | An act names a record that is not held. Should not occur. |
+
+A record a run finds already held, such as evidence an earlier run recorded, is not a refusal: the
+tool answers with the record and its earlier act, and the run gains no act for it.
+
 ## Reads
 
 | Rule | Status | When |
 |---|---|---|
-| `record.not-held` | 404 | A read, a wait or a withdrawal names a record that is not held. `names` gives its kind and identifier. |
+| `record.not-held` | 404 | A read, a wait or a withdrawal names a record that is not held, a run, an act or a blueprint version included, or `/process/answers/run` names a run the graph does not hold. `names` gives its kind and identifier. |
+| `record.format` | 400 | `record` of `GET /process/acts` is not `evidence:<id>`, `claim:<id>` or `revision:<id>`. |
 | `answer.revisions.of-two-beliefs` | 422 | `from` and `to` of `GET /answers/belief-change` are revisions of different beliefs. `names` gives both beliefs. |
 | `answer.revision.later-than-asked` | 422 | A revision named by `from` or `to` is dated later than `asOf`, or was recorded later than `asRecordedBy`. `names` gives the revision and both of its times. |
 | `answer.beliefs.in-two-hypotheses` | 422 | `GET /answers/comparison` names a second hypothesis that differs from the first. |

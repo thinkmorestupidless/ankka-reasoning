@@ -1,15 +1,16 @@
 # How ankka-reasoning works
 
-> The path of a record from a writer's request to a node in the graph and back out as an answer, and why the write side and the graph are kept apart.
+> The path of a record from a writer's request, or a run's tool call, to a node in the graph and back out as an answer, and why the write side and the graph are kept apart.
 
 Source: https://reasoning.ankka.cloud/concepts/architecture/
-ankka-reasoning is one ankka service with three parts: records, graph consumers and answers. A writer
-sends a record; the service checks it and keeps it; the record is published to a Kafka topic as a node
-and its edges; ankka's graph sink copies the topic into Neo4j; and a reader's question is answered
-by walking that graph. The write never waits for the graph, and the graph is never written by the
-service.
+ankka-reasoning is one ankka service with four parts: records, graph consumers, answers, and the
+blueprints it hosts on ankka's agent runtime. A writer sends a record, or a run of a blueprint writes
+one through a tool; the service checks it and keeps it; the record is published to a Kafka topic as a
+node and its edges; ankka's graph sink copies the topic into Neo4j; and a reader's question is
+answered by walking that graph. The write never waits for the graph, and the graph is never written
+by the service.
 
-![How ankka-reasoning works. Writers, a person, a script or a test, send records to the ankka-reasoning service, which runs in an ankka project. Inside the service, Records holds one entity per record, never edited, and checks every rule against the service's own records; every record is kept in the service's Postgres database. Each change goes to the graph consumers, one per kind of record, which turn each record into a node and each link it stated into an edge and publish them as graph deltas to a compacted delta topic in Kafka under the contract ankka.graph-delta.v1. The graph sink, a second service in the same project that runs ankka's graph sink over ankka-contrib's Neo4j store, reads the topic and merges each delta into the graph database, Neo4j, which is a copy that can be emptied and rebuilt from the topic alone. Readers ask the service's Answers, which query the graph database, read only, and reply with records only. A write never waits for the graph.](../assets/diagrams/architecture.svg)
+![How ankka-reasoning works. Writers, a person, a script or a test, send records to the ankka-reasoning service, which runs in an ankka project; and a run of the appraiser blueprint, hosted by the service on ankka's agent runtime, writes records through its tools, each with an act. Inside the service, Records holds one entity per record, never edited, and checks every rule against the service's own records; every record is kept in the service's Postgres database. Each change goes to the graph consumers, one per kind of record, which turn each record into a node and each link it stated into an edge and publish them as graph deltas to a compacted delta topic in Kafka under the contract ankka.graph-delta.v1. The graph sink, a second service in the same project that runs ankka's graph sink over ankka-contrib's Neo4j store, reads the topic and merges each delta into the graph database, Neo4j, which is a copy that can be emptied and rebuilt from the topic alone. Readers ask the service's Answers, which query the graph database, read only, and reply with records only. A write never waits for the graph.](../assets/diagrams/architecture.svg)
 
 ## Records: where the truth is
 
@@ -65,6 +66,21 @@ The graph database holds nothing the topic does not. It can be emptied and fille
 topic alone, with the service not involved, and every answer is the same afterwards.
 [Operate the service](../deploy/operate.md) does it.
 
+## Runs: a blueprint writes through tools
+
+The service hosts one blueprint, the appraiser, on ankka's
+[agent runtime](https://docs.ankka.cloud/build/blueprints/). A run of it is started by a request and
+carried out by ankka: its workers call the three tools the service gives them, and each tool writes a
+record exactly as a request to the belief layer's route would, under the same rules, and then writes
+the record's act. The run, its ending and the blueprint's versions are ankka's own records, which the
+service copies into records of its own as ankka's events arrive, so that they reach the graph beside
+what the run wrote. [The process layer](process-layer.md) is the model, and
+[Run a blueprint](../build/run-a-blueprint.md) the requests.
+
+A run asks a text model and a judgment through ankka's providers, from keys in the environment.
+Without a key the service starts and serves everything else; a run that asks ends `failed` naming the
+key. The build's suites script both providers and never call out.
+
 ## Answers: a walk, made of records
 
 An answer is a Cypher query that starts from one node found by its identifier and walks outwards: from
@@ -105,15 +121,17 @@ writes to Neo4j. [Deploy on ankka](../deploy/deploy-on-ankka.md) applies each pa
 
 ## The modules
 
-The code is five sbt modules, and the direction they depend in is the layering:
+The code is six sbt modules, and the direction they depend in is the layering:
 
 | Module | Holds |
 |---|---|
 | `graph` | the vocabulary as a value, the only way to build an element, the reader of the graph database |
 | `belief` | the belief layer: its records, rules, graph consumers, answers and routes |
 | `market` | the market layer, built on `belief` |
-| `service` | both layers composed into the one deployable |
-| `seed` | a client of the service over HTTP: seed files and the measuring tool |
+| `process` | the process layer, built on `market`: acts, runs, versions, the tools, the appraiser and the golden set |
+| `service` | the three layers composed into the one deployable, with the providers from the environment |
+| `seed` | a client of the service over HTTP: seed files and the two measuring tools |
 
-`belief` does not depend on `market`, so a market word in the belief layer does not compile.
-[Layers and the vocabulary](layers.md) says what that buys.
+`belief` does not depend on `market`, and neither on `process`, so a market word in the belief layer
+or a process word in either does not compile. [Layers and the vocabulary](layers.md) says what that
+buys.

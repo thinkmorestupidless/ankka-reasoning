@@ -1,6 +1,6 @@
 ---
 name: ankka-reasoning
-description: What ankka-reasoning is and how to use it — a reasoning graph on ankka that holds questions, hypotheses, holders, sources, evidence, claims and belief revisions as records that are never edited, publishes them to Neo4j through ankka's graph sink, and answers why a belief changed, what was believed at a past time and where two holders differ; also markets, price observations and resolutions, withdrawing text, the HTTP API, every refusal and the graph vocabulary. Use for any question about recording reasoning in ankka-reasoning, asking it for explanations, querying its graph, or deploying it.
+description: What ankka-reasoning is and how to use it — a reasoning graph on ankka that holds questions, hypotheses, holders, sources, evidence, claims and belief revisions as records that are never edited, publishes them to Neo4j through ankka's graph sink, and answers why a belief changed, what was believed at a past time and where two holders differ; also markets, price observations and resolutions, runs of the appraiser blueprint with the act behind every record it wrote, the golden set, withdrawing text, the HTTP API, every refusal and the graph vocabulary. Use for any question about recording reasoning in ankka-reasoning, running its blueprint, asking it for explanations, querying its graph, or deploying it.
 pages:
   - index.md
   - get-started/run-locally.md
@@ -10,6 +10,7 @@ pages:
   - concepts/nothing-is-edited.md
   - concepts/two-times.md
   - concepts/layers.md
+  - concepts/process-layer.md
   - concepts/writers-and-holders.md
   - build/record-reasoning.md
   - build/ask-for-explanations.md
@@ -17,8 +18,12 @@ pages:
   - build/withdraw-text.md
   - build/read-the-graph.md
   - build/seed-files.md
+  - build/run-a-blueprint.md
+  - build/the-appraiser.md
+  - build/golden-set.md
   - deploy/deploy-on-ankka.md
   - deploy/operate.md
+  - deploy/live.md
   - reference/http-api.md
   - reference/refusals.md
   - reference/graph-vocabulary.md
@@ -78,6 +83,20 @@ records only.
 12. **The service never writes to Neo4j.** Query the graph database directly for reading only, using
     the kinds and properties `GET /graph/vocabulary` lists. Every node has the label `Element`, an
     `id` of the form `<kind>:<identifier>`, and `dated` and `recordedAt` in milliseconds.
+13. **A run writes through tools, and every record it writes has an act.** `POST /process/runs`
+    with `{blueprint: "appraiser", runId, input: {tranche, holder, question, follows?, observedAt?}}`
+    starts a run and answers at once; wait for it with `GET /process/runs/{run}` until `ending`
+    appears. The run's holder must be one the service registered for the blueprint
+    (`REASONING_APPRAISER_HOLDERS`, `appraiser-a` and `appraiser-b` by default). A run's revision is
+    `<run id>.<hypothesis id>`; the June run follows the May run's with `follows`. A record a person
+    wrote has no act, and `GET /process/acts?record=claim:<id>` answers `{}` for it.
+14. **Every answer has a twin under `/process`** with the same parameters, answering
+    `{answer, acts}`; `answer` is byte for byte the lower route's. Use the twin when the reader
+    wants to know which run, version, step or worker wrote a record. `GET /process/answers/run?run=`
+    is what a run wrote, from the graph.
+15. **A run needs `ANTHROPIC_API_KEY` and `TYPESAFE_API_KEY`.** Without them the service runs and
+    every run ends `failed` with a `reason` naming the key. A failed run is not a refusal: it is
+    held with its ending, and whatever it wrote before failing stays, with its acts.
 
 ## Before writing a client
 
@@ -100,3 +119,10 @@ records only.
   text.
 - Expecting a person's token to work against a service that lists no issuer. Without
   `ANKKA_AUTH_ISSUERS`, every caller through the gateway is refused with `401`.
+- Reading a run's acts, or an answer with acts, the instant the run ended. The acts' view and the
+  graph lag a moment; read again, or `POST /graph/wait` on the act's own key.
+- Expecting the two holders' claims under `both` in a comparison. A claim is one holder's, so two
+  runs over the same documents share evidence and not claims; `both` is empty and each side's
+  claims are under `onlyA` and `onlyB`.
+- Starting a run of the appraiser with a June tranche observed before 20 June at 22:00: the
+  rumour's evidence is refused as observed before it was published, and the critique fails the run.

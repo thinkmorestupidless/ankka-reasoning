@@ -42,10 +42,13 @@ A prediction market is the first domain it is built for. A market says the crowd
   can be emptied and rebuilt from the topic.
 - A reader asks for **answers**: why a belief changed, the case for a hypothesis, what was believed as
   of a date, where two holders differ. Each is a walk of the graph, made of records only.
+- A **run** of a blueprint writes records too, through tools, and every record it writes is held
+  with its **act**: which run, of which version of the blueprint, in which step, as which worker.
+  An answer says which run read the document that changed a belief.
 - The vocabulary is in **layers**. The belief layer names nothing of markets; the market layer adds
-  markets and resolutions on top and changes nothing beneath it.
+  markets and resolutions on top; the process layer adds runs and acts; each changes nothing beneath it.
 
-![How ankka-reasoning works. Writers, a person, a script or a test, send records to the ankka-reasoning service, which runs in an ankka project. Inside the service, Records holds one entity per record, never edited, and checks every rule against the service's own records; every record is kept in the service's Postgres database. Each change goes to the graph consumers, one per kind of record, which turn each record into a node and each link it stated into an edge and publish them as graph deltas to a compacted delta topic in Kafka under the contract ankka.graph-delta.v1. The graph sink, a second service in the same project that runs ankka's graph sink over ankka-contrib's Neo4j store, reads the topic and merges each delta into the graph database, Neo4j, which is a copy that can be emptied and rebuilt from the topic alone. Readers ask the service's Answers, which query the graph database, read only, and reply with records only. A write never waits for the graph.](assets/diagrams/architecture.svg)
+![How ankka-reasoning works. Writers, a person, a script or a test, send records to the ankka-reasoning service, which runs in an ankka project; and a run of the appraiser blueprint, hosted by the service on ankka's agent runtime, writes records through its tools, each with an act. Inside the service, Records holds one entity per record, never edited, and checks every rule against the service's own records; every record is kept in the service's Postgres database. Each change goes to the graph consumers, one per kind of record, which turn each record into a node and each link it stated into an edge and publish them as graph deltas to a compacted delta topic in Kafka under the contract ankka.graph-delta.v1. The graph sink, a second service in the same project that runs ankka's graph sink over ankka-contrib's Neo4j store, reads the topic and merges each delta into the graph database, Neo4j, which is a copy that can be emptied and rebuilt from the topic alone. Readers ask the service's Answers, which query the graph database, read only, and reply with records only. A write never waits for the graph.](assets/diagrams/architecture.svg)
 
 ## An example
 
@@ -84,6 +87,11 @@ the first claim. [Your first explanation](get-started/first-explanation.md) does
 - **Writing to it.** [Record reasoning](build/record-reasoning.md) is every kind of record in the
   order it has to arrive; [Markets and resolutions](build/markets.md) adds a market;
   [Seed files](build/seed-files.md) sends a whole history at once.
+- **Running a blueprint.** [The process layer](concepts/process-layer.md) is the model;
+  [Run a blueprint](build/run-a-blueprint.md) starts a run and reads what it wrote;
+  [The appraiser](build/the-appraiser.md) is the blueprint the service carries, and
+  [The golden set](build/golden-set.md) the documents it reads; [Live, against a real model](deploy/live.md)
+  runs it with keys.
 - **Reading from it.** [Ask for explanations](build/ask-for-explanations.md) is every answer the
   service gives; [Read the graph](build/read-the-graph.md) queries Neo4j directly.
 - **Taking text out.** [Withdraw text](build/withdraw-text.md).

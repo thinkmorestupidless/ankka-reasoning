@@ -6,36 +6,50 @@ Guidance for Claude Code (claude.ai/code) working in this repository.
 
 `ankka-reasoning` is a reasoning graph built as an ankka application: a record of evidence,
 claims, hypotheses and beliefs, each an ankka entity, published as graph deltas for ankka's graph
-sink to keep in a graph database. The first feature, the belief layer with the market layer
-on it, is built: five sbt modules, one deployable service, and a suite for every scenario.
+sink to keep in a graph database. Two features are built: the belief layer with the market layer
+on it, and the process layer, which hosts one blueprint, the appraiser, on ankka's agent runtime
+and holds every record a run writes with its act. Six sbt modules, one deployable service, and a
+suite for every scenario.
 
-Start with `specs/001-belief-layer/spec.md` and `plan.md`, then `features/` and `GLOSSARY.md`.
-`research.md` there says why each decision was made, R1 first: text a writer supplied is never
-written to an event, because ankka never removes one. Its "Found during implementation" says what
-building it changed. The family map, conventions and cross-repo decisions are in `../ankka-brain`;
-read `family.md` and `repos/ankka-reasoning.md` there before cross-repo work.
+Start with `specs/001-belief-layer/spec.md` and `plan.md`, then `specs/002-process-layer/`, then
+`features/` and `GLOSSARY.md`. Each `research.md` says why each decision was made: in 001, R1
+first, text a writer supplied is never written to an event, because ankka never removes one; in
+002, R8, the act is written after its record with every check made before either. Each "Found
+during implementation" says what building it changed. The family map, conventions and cross-repo
+decisions are in `../ankka-brain`; read `family.md` and `repos/ankka-reasoning.md` there before
+cross-repo work.
 
 ## Modules
 
-`graph` ← `belief` ← `market` ← `service`, and `seed` apart. The first three are published as
-libraries (`ankka-reasoning-graph`, `-belief`, `-market`); `service` is published as an image. The direction is the layering: a
-market word in `belief` does not compile. `service` composes the layers and holds every suite that
-needs the whole service. `seed` is a client over HTTP and depends on none of them.
+`graph` ← `belief` ← `market` ← `process` ← `service`, and `seed` apart. The first four are
+published as libraries (`ankka-reasoning-graph`, `-belief`, `-market`, `-process`); `service` is
+published as an image. The direction is the layering: a market word in `belief`, or a process word
+in either, does not compile. `process` holds the acts, runs and versions, the three tools, the
+appraiser as data and the golden set (`golden-set/` at the root, packaged as its resources).
+`service` composes the layers, reads the model and judgment providers from the environment, and
+holds every suite that needs the whole service. `seed` is a client over HTTP and depends on none of
+them.
 
 Pinned: ankka 0.12.0, ankka-contrib's sink image `ankka-graph-sink-neo4j:0.1.0`, Scala 3.9.0, in
-`project/Dependencies.scala`.
+`project/Dependencies.scala`. The model and judgment keys, `ANTHROPIC_API_KEY` and
+`TYPESAFE_API_KEY`, are ankka's providers'; the build sets neither and every suite scripts both.
 
 ## Commands
 
 ```bash
 sbt graph/test belief/test market/test process/test   # components alone: seconds
 sbt 'service/testOnly *QuestionsFeatures'       # one feature's suite; no Docker
+sbt 'service/testOnly *ToolsFeatures'           # the process layer's tools: the service under the test kit, Docker for Postgres
 sbt 'service/testOnly *SeededSetSuite'          # a graph suite: starts Kafka, Neo4j and the sink
+sbt 'service/testOnly *GoldenSetFeatures'       # the appraiser's four runs against the graph, scripted model
+sbt 'service/testOnly *LiveAppraiserSuite'      # against the real providers; skipped without both keys
 sbt test                                        # everything; Docker required
 sbt scalafmtAll scalafmtSbt                     # format; CI checks it
-just up && just run                             # the stack and the service on :9000
+just up && just run                             # the stack and the service on :9000; keys in the environment for a run
 just seed launch-example                        # post seed/<name>.json to a running service
-just measure                                    # time to the graph, time to an answer (SC-007)
+just seed golden-set                            # the golden set's question, sources and market
+just measure                                    # time to the graph, time to an answer, over 555 records
+just measure-golden-set                         # the appraiser's four runs timed; the service needs a model
 just generate                                   # rewrite seed/ten-questions.json from its generator
 just rebuild                                    # empty Neo4j and fill it from the topic
 just features                                   # the features, the glossary and the specs agree
@@ -50,7 +64,11 @@ test switch passed to sbt reaches the test JVM only if `build.sbt` forwards it.
 
 One service fixture is shared by every suite in a test JVM, and so is one graph. A suite keeps out
 of the others' way by naming its records after itself, and puts the shared clock back when it
-moves it.
+moves it. The shared service's model and judgment are scripted (`ScriptedAppraiser` plays the
+golden set to the letter); a suite that scripts them resets them first. Act rows and the graph lag
+a write by a moment: read them inside `Eventually.eventually`, never once. The second holder's run
+over documents a first run read writes no evidence act, so counts of what a run wrote depend on
+what the shared service already holds.
 
 ## Documentation
 
@@ -84,6 +102,8 @@ hand. `docs/contributing/releasing.md` has the checks and the secrets.
 | Links point backwards | A record links only to records already held and dated no later than itself. Cycles cannot be made, so nothing checks for them. |
 | The belief layer names nothing above it | No market, and later no process, word in the belief layer. A layer adds kinds and edges from its own nodes and changes nothing beneath it. |
 | Answers are records | An explanation is made of held records and links. No text is generated. |
+| A record has one act, written with it | A tool resolves the run, the worker and the holder, writes the record, then its act, and answers the model after both. A record keeps its first act; a run gains none for a record it did not write. The belief layer knows nothing of acts. |
+| A tool cannot fail a run | A tool refuses a record and tells the model. A handler step after it fails the run with a reason. Nothing reaches into ankka's run to end it. |
 | Missing platform features are requests | What ankka, ankka-flow or ankka-contrib cannot do is written down as a request to them. Where a feature cannot wait, the way round is named in its plan's Complexity Tracking beside the request that would remove it, and never reaches into the platform's tables or internals. |
 
 ## Specs and living features

@@ -1,6 +1,6 @@
 ---
 name: ankka-reasoning
-description: What ankka-reasoning is and how to use it — a reasoning graph on ankka that holds questions, hypotheses, holders, sources, evidence, claims and belief revisions as records that are never edited, publishes them to Neo4j through ankka's graph sink, and answers why a belief changed, what was believed at a past time and where two holders differ; also markets, price observations and resolutions, withdrawing text, the HTTP API, every refusal and the graph vocabulary. Use for any question about recording reasoning in ankka-reasoning, asking it for explanations, querying its graph, or deploying it.
+description: What ankka-reasoning is and how to use it — a reasoning graph on ankka that holds questions, hypotheses, holders, sources, evidence, claims and belief revisions as records that are never edited, publishes them to Neo4j through ankka's graph sink, and answers why a belief changed, what was believed at a past time and where two holders differ; also markets, price observations and resolutions, runs of the appraiser blueprint with the act behind every record it wrote, the golden set, withdrawing text, the HTTP API, every refusal and the graph vocabulary. Use for any question about recording reasoning in ankka-reasoning, running its blueprint, asking it for explanations, querying its graph, or deploying it.
 ---
 
 # ankka-reasoning
@@ -54,6 +54,20 @@ records only.
 12. **The service never writes to Neo4j.** Query the graph database directly for reading only, using
     the kinds and properties `GET /graph/vocabulary` lists. Every node has the label `Element`, an
     `id` of the form `<kind>:<identifier>`, and `dated` and `recordedAt` in milliseconds.
+13. **A run writes through tools, and every record it writes has an act.** `POST /process/runs`
+    with `{blueprint: "appraiser", runId, input: {tranche, holder, question, follows?, observedAt?}}`
+    starts a run and answers at once; wait for it with `GET /process/runs/{run}` until `ending`
+    appears. The run's holder must be one the service registered for the blueprint
+    (`REASONING_APPRAISER_HOLDERS`, `appraiser-a` and `appraiser-b` by default). A run's revision is
+    `<run id>.<hypothesis id>`; the June run follows the May run's with `follows`. A record a person
+    wrote has no act, and `GET /process/acts?record=claim:<id>` answers `{}` for it.
+14. **Every answer has a twin under `/process`** with the same parameters, answering
+    `{answer, acts}`; `answer` is byte for byte the lower route's. Use the twin when the reader
+    wants to know which run, version, step or worker wrote a record. `GET /process/answers/run?run=`
+    is what a run wrote, from the graph.
+15. **A run needs `ANTHROPIC_API_KEY` and `TYPESAFE_API_KEY`.** Without them the service runs and
+    every run ends `failed` with a `reason` naming the key. A failed run is not a refusal: it is
+    held with its ending, and whatever it wrote before failing stays, with its acts.
 
 ## Before writing a client
 
@@ -76,6 +90,13 @@ records only.
   text.
 - Expecting a person's token to work against a service that lists no issuer. Without
   `ANKKA_AUTH_ISSUERS`, every caller through the gateway is refused with `401`.
+- Reading a run's acts, or an answer with acts, the instant the run ended. The acts' view and the
+  graph lag a moment; read again, or `POST /graph/wait` on the act's own key.
+- Expecting the two holders' claims under `both` in a comparison. A claim is one holder's, so two
+  runs over the same documents share evidence and not claims; `both` is empty and each side's
+  claims are under `onlyA` and `onlyB`.
+- Starting a run of the appraiser with a June tranche observed before 20 June at 22:00: the
+  rumour's evidence is refused as observed before it was published, and the critique fails the run.
 
 ## Reference files
 
@@ -92,11 +113,12 @@ Open the one a task needs; each is one topic and stands alone.
 
 ### Concepts
 
-- `references/concepts/architecture.md` — The path of a record from a writer's request to a node in the graph and back out as an answer, and why the write side and the graph are kept apart.
+- `references/concepts/architecture.md` — The path of a record from a writer's request, or a run's tool call, to a node in the graph and back out as an answer, and why the write side and the graph are kept apart.
 - `references/concepts/records-and-links.md` — The kinds of record ankka-reasoning holds, the links each one states, and the three rules that keep the graph a history that cannot loop or be rewritten.
 - `references/concepts/nothing-is-edited.md` — Why a record is never changed once held, how thinking again is recorded instead, and the one exception, withdrawing text, with what it leaves behind.
 - `references/concepts/two-times.md` — The difference between when a record is dated and when it was recorded, and how asOf and asRecordedBy use each to answer a question about the past.
 - `references/concepts/layers.md` — How the graph's vocabulary is divided into a belief layer, a market layer and a process layer, what a layer may and may not do, and how the vocabulary is enforced.
+- `references/concepts/process-layer.md` — How a run of a blueprint is recorded beside what it wrote, as blueprint versions, runs, run endings and acts, what each links to, why the act is written after its record, and what a reader gets from an answer with acts.
 - `references/concepts/writers-and-holders.md` — Who a caller is taken to be, how a writer comes to speak for a holder, what that permits, and what a steward may do that other writers may not.
 
 ### Build
@@ -107,11 +129,15 @@ Open the one a task needs; each is one topic and stands alone.
 - `references/build/withdraw-text.md` — Take the text out of a piece of evidence or a claim with a note saying why, and know what stays, who may do it, and where and when the text is gone.
 - `references/build/read-the-graph.md` — Query the graph database directly with Cypher, using the vocabulary's labels, identifiers and edges, filter by either of a record's two times, and know when the graph has caught up with a write.
 - `references/build/seed-files.md` — Write a seed file of records to post in order, name a record so a later step can refer to it, send the file with just seed, and use the two files the repository ships.
+- `references/build/run-a-blueprint.md` — Start a run of the appraiser over HTTP, wait for it to end, read the acts it wrote, find the act behind any record, register a second version of its instructions, and ask every answer with the acts behind it.
+- `references/build/the-appraiser.md` — The one blueprint the service carries, as data, with its two workers and their instructions, its six steps, the critique that can fail a run, its two instruction sets and what each changes, and what a run of it writes from start to end.
+- `references/build/golden-set.md` — The eight documents the appraiser reads, two tranches a month apart, with the reading expected of each and the probabilities the two instruction sets arrive at, and the four answers the four runs give.
 
 ### Deploy and operate
 
 - `references/deploy/deploy-on-ankka.md` — Deploy the graph sink that fills the graph database, then the ankka-reasoning service, to an ankka installation with Kafka and Neo4j, let people write through the gateway, and know which of these steps is unproven.
 - `references/deploy/operate.md` — Rebuild the graph database from the topic, measure how long a record takes to reach the graph, know what withdrawing text removes and when, and read the service's failures.
+- `references/deploy/live.md` — Give the service the two keys a run of the appraiser needs, know what a run does without them, run the live suite against the real model and judgment, and set the keys as secrets on a cluster.
 
 ### Reference
 

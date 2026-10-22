@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" role="img" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" aria-labelledby="title desc">
+  <title id="title">The process layer's kinds of node</title>
+  <desc id="desc">The process layer above the belief layer. In the process layer: a run is of a blueprint version; a run ending ended a run; an act is in a run, wrote one record of the belief layer, a piece of evidence, a claim or a belief revision, and was stated as a holder. In the belief layer beneath, unchanged: evidence, claim, belief revision and holder. Every arrow is a link stated by the record it leaves and points to a record that was already held. A record has one act, the first run's, and an act is written with its record and never without it.</desc>
+  <style>
+    .bg { fill: #ffffff; }
+    .ink { fill: #1f2328; }
+    .muted { fill: #59636e; }
+    .box { fill: #f6f8fa; stroke: #afb8c1; stroke-width: 1.2; }
+    .hot { fill: #fff4ec; stroke: #c2410c; stroke-width: 1.5; }
+    .ns { fill: none; stroke: #8c959f; stroke-width: 1.2; stroke-dasharray: 5 4; }
+    .line { stroke: #1f2328; stroke-width: 1.4; fill: none; }
+    .head { fill: #1f2328; }
+    text { font-size: 13px; }
+    .title { font-size: 14px; font-weight: 600; }
+    .small { font-size: 11.5px; }
+    .label { font-size: 11.5px; font-weight: 600; letter-spacing: 0.02em; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d1117; }
+      .ink { fill: #e6edf3; }
+      .muted { fill: #9198a1; }
+      .box { fill: #161b22; stroke: #3d444d; }
+      .hot { fill: #2a1a10; stroke: #ff8a4c; }
+      .ns { stroke: #656c76; }
+      .line { stroke: #e6edf3; }
+      .head { fill: #e6edf3; }
+    }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" class="head"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="640" rx="12"/>
+
+  <!-- The process layer -->
+  <rect class="ns" x="24" y="40" width="1152" height="300" rx="10"/>
+  <text class="label muted" x="60" y="62">PROCESS LAYER</text>
+
+  <rect class="hot" x="70" y="84" width="320" height="84" rx="8"/>
+  <text class="title ink" x="230" y="112" text-anchor="middle">Blueprint version</text>
+  <text class="small muted" x="230" y="132" text-anchor="middle">one registration of a blueprint, as ankka holds it:</text>
+  <text class="small muted" x="230" y="148" text-anchor="middle">name, number, digest, when registered</text>
+
+  <rect class="hot" x="440" y="84" width="320" height="84" rx="8"/>
+  <text class="title ink" x="600" y="112" text-anchor="middle">Run</text>
+  <text class="small muted" x="600" y="132" text-anchor="middle">one carrying out of one blueprint version</text>
+  <text class="small muted" x="600" y="148" text-anchor="middle">under a run id; when it started, who started it</text>
+
+  <rect class="hot" x="810" y="84" width="320" height="84" rx="8"/>
+  <text class="title ink" x="970" y="112" text-anchor="middle">Run ending</text>
+  <text class="small muted" x="970" y="132" text-anchor="middle">how a run ended: completed or failed,</text>
+  <text class="small muted" x="970" y="148" text-anchor="middle">a reason when it failed, and when</text>
+
+  <rect class="hot" x="470" y="232" width="260" height="84" rx="8"/>
+  <text class="title ink" x="600" y="260" text-anchor="middle">Act</text>
+  <text class="small muted" x="600" y="280" text-anchor="middle">one record a run wrote: in which step,</text>
+  <text class="small muted" x="600" y="296" text-anchor="middle">as which worker; written with the record</text>
+
+  <line class="line" x1="440" y1="126" x2="392" y2="126" marker-end="url(#a)"/>
+  <text class="small ink" x="416" y="118" text-anchor="middle">of</text>
+  <line class="line" x1="810" y1="126" x2="762" y2="126" marker-end="url(#a)"/>
+  <text class="small ink" x="786" y="118" text-anchor="middle">ended</text>
+  <line class="line" x1="600" y1="232" x2="600" y2="170" marker-end="url(#a)"/>
+  <text class="small ink" x="608" y="206">in</text>
+
+  <!-- The belief layer -->
+  <rect class="ns" x="24" y="400" width="1152" height="212" rx="10"/>
+  <text class="label muted" x="60" y="422">BELIEF LAYER, unchanged</text>
+
+  <rect class="box" x="96" y="440" width="200" height="70" rx="8"/>
+  <text class="title ink" x="196" y="468" text-anchor="middle">Evidence</text>
+  <text class="small muted" x="196" y="488" text-anchor="middle">one act, the first run's</text>
+
+  <rect class="box" x="356" y="440" width="200" height="70" rx="8"/>
+  <text class="title ink" x="456" y="468" text-anchor="middle">Claim</text>
+  <text class="small muted" x="456" y="488" text-anchor="middle">derives from evidence</text>
+
+  <rect class="box" x="616" y="440" width="220" height="70" rx="8"/>
+  <text class="title ink" x="726" y="468" text-anchor="middle">Belief revision</text>
+  <text class="small muted" x="726" y="488" text-anchor="middle">rests on the holder's own claims</text>
+
+  <rect class="box" x="904" y="440" width="200" height="70" rx="8"/>
+  <text class="title ink" x="1004" y="468" text-anchor="middle">Holder</text>
+  <text class="small muted" x="1004" y="488" text-anchor="middle">the blueprint speaks for it</text>
+
+  <!-- act -> belief layer -->
+  <path class="line" d="M 520 316 L 520 378 L 196 378 L 196 438" marker-end="url(#a)"/>
+  <path class="line" d="M 580 316 L 580 378 L 456 378 L 456 438" marker-end="url(#a)"/>
+  <path class="line" d="M 640 316 L 640 378 L 726 378 L 726 438" marker-end="url(#a)"/>
+  <text class="small ink" x="330" y="370">wrote, one of the three</text>
+  <path class="line" d="M 700 316 L 700 346 L 1004 346 L 1004 438" marker-end="url(#a)"/>
+  <text class="small ink" x="852" y="340" text-anchor="middle">as</text>
+
+  <text class="small muted" x="600" y="546" text-anchor="middle">Every arrow is a link, stated by the record it leaves and pointing to a record that was already held.</text>
+  <text class="small muted" x="600" y="564" text-anchor="middle">A record has one act, the first run's. An act is written with its record and never without it.</text>
+  <text class="small muted" x="600" y="582" text-anchor="middle">A record a person or a script wrote has no act.</text>
+</svg>

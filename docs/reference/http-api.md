@@ -2,8 +2,8 @@
 title: HTTP API
 description: Look up every route the service serves, the body each takes, the reply each gives, and how an answer is read as of a past time.
 kind: reference
-layers: [belief, market]
-related: [reference/refusals.md, reference/graph-vocabulary.md, build/record-reasoning.md, build/ask-for-explanations.md, build/markets.md, concepts/two-times.md]
+layers: [belief, market, process]
+related: [reference/refusals.md, reference/graph-vocabulary.md, build/record-reasoning.md, build/ask-for-explanations.md, build/markets.md, build/run-a-blueprint.md, concepts/two-times.md]
 ---
 
 # HTTP API
@@ -323,6 +323,58 @@ curl -s localhost:9000/markets/launch-market/beliefs-at-resolution
 }
 ```
 
+## Runs and versions
+
+| Route | Body | Reply |
+|---|---|---|
+| `POST /process/runs` | `{blueprint, runId, input}` | the run: `{id, blueprint, version, startedBy, dated, recordedAt, writer}`; `200` when the same run is held |
+| `GET /process/runs/{run}` | | `{run, ending?, acts: [act]}` |
+| `GET /process/runs/{run}/acts` | | `{acts: [act]}` |
+| `GET /process/acts/{act}` | | the act |
+| `GET /process/acts?record=<kind>:<id>` | | `{act?}`: the act of a piece of evidence, a claim or a revision; `{}` for a record no run wrote |
+| `POST /process/appraiser/versions` | `{instructions}` | `{blueprint, version, dated}`; `201` for a new version, `200` when the instructions are the current version's |
+| `GET /process/appraiser/versions` | | `{versions: [{blueprint, version, digest, dated}]}` |
+| `GET /process/appraiser/versions/{n}` | | the version, with the whole blueprint as ankka holds it under `blueprint` |
+
+`POST /process/runs` answers once ankka has accepted the run, which then goes on without the
+caller; `dated` is when ankka started it and `startedBy` the caller. `blueprint` is `appraiser`,
+the one the service carries. `runId` is an identifier of at most 47 characters not starting
+`schedule:`. `input` is checked against the blueprint's input shape before the run starts, and its
+`holder` must be held and spoken for by the blueprint. A run ends with an `ending`,
+`{run, status, reason?, dated, recordedAt, writer}`, where `status` is `completed` or `failed`.
+
+An act is `{id, run, step, worker, blueprint, version, record: {kind, id}, holder, dated, recordedAt,
+writer}`. The writer of a run, a run ending and a version is the service, `service:reasoning`; the
+writer of an act is the blueprint, `blueprint:appraiser`. A run's acts and a record's act come
+from a view that may lag a write by a moment. `instructions` is `v1` or `v2`.
+[Run a blueprint](../build/run-a-blueprint.md) shows each reply.
+
+## Answers with acts
+
+Every route under `/answers`, and a market's two graph reads, is served again under `/process`,
+with the same parameters, `asOf` and `asRecordedBy` included. The reply is `{answer, acts}`:
+`answer` is the lower route's reply, unchanged, and `acts` has one entry for every record in it
+that has an act.
+
+| Route (graph) | `answer` is |
+|---|---|
+| `GET /process/answers/belief-change?from=&to=` | `GET /answers/belief-change` |
+| `GET /process/answers/belief?holder=&hypothesis=` | `GET /answers/belief` |
+| `GET /process/answers/case?hypothesis=&stance=` | `GET /answers/case` |
+| `GET /process/answers/learned?question=&after=` | `GET /answers/learned` |
+| `GET /process/answers/comparison?hypothesis=&a=&b=` | `GET /answers/comparison` |
+| `GET /process/answers/resting-on-revised?question=` | `GET /answers/resting-on-revised` |
+| `GET /process/markets/{market}/resolution` | `GET /markets/{market}/resolution` |
+| `GET /process/markets/{market}/beliefs-at-resolution` | `GET /markets/{market}/beliefs-at-resolution` |
+| `GET /process/answers/run?run=` | `{run, ending?, wrote: [{act, record: {kind, id}}]}`: everything the run wrote, from the graph |
+
+An entry of `acts` is `{record: {kind, id}, act, run, runEnding?, blueprintVersion}`, where `act`
+is `{id, step, worker, recordKind, dated, recordedAt}`, `run` and `runEnding` are the records
+without their writer, and `blueprintVersion` is `{id, blueprint, version, digest, dated, recordedAt}`.
+An act is shown for a record that counts at the time asked about whenever the act itself was
+recorded: it is the record's provenance, as a source is shown beside evidence. A run the graph does
+not hold is `404` with `record.not-held`.
+
 ## The graph
 
 | Route | Body | Reply |
@@ -333,8 +385,10 @@ curl -s localhost:9000/markets/launch-market/beliefs-at-resolution
 `/graph/wait` answers once the graph holds a record's node and every edge the record stated, at the
 record's version or later, or once the limit has passed. An edge counts only when the record it
 points to is in the graph too, so a reader who has waited for a record can follow every link from it. `kind` is `question`, `holder`, `source`,
-`evidence`, `claim`, `revision` or `market`; a resolution is waited for through its market, and a
-price observation as the revision it is. `limitMs` is 5,000 when left out and at most
+`evidence`, `claim`, `revision`, `market`, `run`, `run-ending`, `act` or `blueprint-version`, the
+last with the identifier `<blueprint>@<n>`; a resolution is waited for through its market, and a
+price observation as the revision it is. A wait for a record a run wrote waits for that record and
+not for its act, which has a key of its own. `limitMs` is 5,000 when left out and at most
 `REASONING_WAIT_LIMIT_MAX_MS` (30,000 by default). Passing the limit is a `200` with
 `caughtUp: false` and the keys of the elements still missing, never an error, and says nothing
 about whether the record is held: it is. A record that is not held is a `404`. With no broker or no
@@ -348,7 +402,8 @@ curl -s localhost:9000/graph/wait -d '{"kind":"revision","id":"agent-a.launch.2"
 {"caughtUp":true,"waitedMs":1926,"missing":[]}
 ```
 
-`/graph/vocabulary` serves [the graph vocabulary](graph-vocabulary.md) as JSON: for each layer its
+`/graph/vocabulary` serves [the graph vocabulary](graph-vocabulary.md) as JSON, three layers,
+`belief`, `market` and `process`: for each layer its
 kinds of node (`label`, `id`, `properties`, `publishedBy`), its kinds of edge (`type`, `from`, `to`,
 `properties`, `publishedBy`) and its holder kinds. A property is `{name, type, optional}`, where
 `type` is `text`, `number`, `whole number` or `flag`.

@@ -226,6 +226,60 @@ no earlier too, with one exception. A holder and a source are registered and not
 the day they were registered, which may be later than the evidence or claim that names them. Leave
 `Holder` and `Source` nodes out of a filter on `dated`.
 
+## Trace a record to the run that wrote it
+
+A record a run of a blueprint wrote has an `Act` node pointing at it, and the act is in a run, of a
+blueprint version. After [the golden set](golden-set.md)'s runs, from the first holder's June
+revision:
+
+```bash
+docker compose exec neo4j cypher-shell -u neo4j -p reasoning-local-password \
+  "MATCH (r:Element {id: 'revision:appraiser-a-june.yes'})<-[:WROTE]-(a:Act)-[:IN]->(run:Run)-[:OF]->(v:BlueprintVersion) RETURN a.step, a.worker, run.id, v.version"
+```
+
+```text
+a.step, a.worker, run.id, v.version
+"revise", "reviser", "run:appraiser-a-june", 1
+```
+
+And everything one run wrote, with the step and worker that wrote each:
+
+```bash
+docker compose exec neo4j cypher-shell -u neo4j -p reasoning-local-password \
+  "MATCH (a:Act)-[:IN]->(run:Element {id: 'run:appraiser-a-june'}) MATCH (a)-[:WROTE]->(x) RETURN a.step, a.worker, a.recordKind, x.id ORDER BY x.id"
+```
+
+```text
+a.step, a.worker, a.recordKind, x.id
+"read", "reader", "claim", "claim:appraiser-a-june.405f185903659588"
+"read", "reader", "claim", "claim:appraiser-a-june.91a8bcc9c6aad68f"
+"read", "reader", "claim", "claim:appraiser-a-june.ea9417e0bda58d7d"
+"read", "reader", "evidence", "evidence:51f5d2eff2e9672edfd0874e3c121fb24bf59e1b83f7cc580c7e5d5bcfa79d7e"
+"read", "reader", "evidence", "evidence:d97e4d2a99ad367ec437280d09b86999eb9c1ea6821d243bc15d248920dfdc7c"
+"read", "reader", "evidence", "evidence:f6662d3eaf783467d4b1c7352becc74afa91bd73feea684f180f9cc2d3b5e4a8"
+"revise", "reviser", "revision", "revision:appraiser-a-june.yes"
+```
+
+Two holders appraised by two versions of the blueprint, each revision beside the version that
+produced it:
+
+```bash
+docker compose exec neo4j cypher-shell -u neo4j -p reasoning-local-password \
+  "MATCH (run:Run)-[:OF]->(v:BlueprintVersion) MATCH (a:Act)-[:IN]->(run) MATCH (a)-[:WROTE]->(r:BeliefRevision) RETURN r.id, r.probability, v.version ORDER BY r.id"
+```
+
+```text
+r.id, r.probability, v.version
+"revision:appraiser-a-june.yes", 0.72, 1
+"revision:appraiser-a-may.yes", 0.35, 1
+"revision:appraiser-b-june.yes", 0.66, 2
+"revision:appraiser-b-may.yes", 0.4, 2
+```
+
+A record with no `Act` pointing at it was written by a person or a script: the launch example's
+records have none. A run with no `RunEnding` is still running. The same walks are served over HTTP
+as [answers with acts](run-a-blueprint.md#answers-with-the-acts-behind-them).
+
 ## Versions, and nodes not yet filled in
 
 `_version` is the revision of the record that an element was last published at, and it is how the sink
@@ -343,7 +397,7 @@ This reply is an excerpt: one kind of node and one kind of edge from the `belief
 }
 ```
 
-The reply has two layers, `belief` and `market`, and each lists its `nodes`, its `edges` and the
+The reply has three layers, `belief`, `market` and `process`, and each lists its `nodes`, its `edges` and the
 `holderKinds` it adds. A claim's `statement` is optional because a claim whose text has been withdrawn
 has none: [Withdraw text](withdraw-text.md). Why the vocabulary is layered is on
 [Layers and the vocabulary](../concepts/layers.md).

@@ -59,3 +59,16 @@ class ReadRefusalsSuite extends munit.FunSuite:
     assertEquals((refused.status, refused.rule), (404, "market.not-resolved"), refused.body)
     assertEquals(refused.names.get("market"), Some("rr-open-market"))
   }
+
+  test("a run of a blueprint the service does not carry is refused before its input is read") {
+    val refused = http.post(
+      "/process/runs",
+      Obj(
+        "blueprint" -> "forecaster",
+        "runId"     -> "rr-forecaster-1",
+        "input"     -> Obj("tranche" -> "may")
+      )
+    )
+    assertEquals((refused.status, refused.rule), (404, "blueprint.not-held"), refused.body)
+    assertEquals(refused.names.get("blueprint"), Some("forecaster"))
+  }

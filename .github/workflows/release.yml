@@ -128,9 +128,9 @@ jobs:
           bundle=$(find . -path '*/sona-bundle/bundle.zip' -type f | head -1)
           if [ -z "$bundle" ]; then echo "::error::sonaBundle wrote no bundle.zip"; find . -name '*.zip' -path '*target*' | head; exit 1; fi
           echo "bundle: $bundle ($(du -h "$bundle" | cut -f1))"
-          # The three modules and nothing else: a fourth would be a name on Central for good.
+          # The four modules and nothing else: a fifth would be a name on Central for good.
           modules="$(unzip -Z1 "$bundle" | grep '\.pom$' | sed 's|.*/\(ankka-reasoning-[a-z]*\)_3-.*|\1|' | sort | tr '\n' ' ')"
-          [ "$modules" = "ankka-reasoning-belief ankka-reasoning-graph ankka-reasoning-market " ] || { echo "::error::the bundle holds '$modules'"; unzip -Z1 "$bundle"; exit 1; }
+          [ "$modules" = "ankka-reasoning-belief ankka-reasoning-graph ankka-reasoning-market ankka-reasoning-process " ] || { echo "::error::the bundle holds '$modules'"; unzip -Z1 "$bundle"; exit 1; }
           version="${GITHUB_REF_NAME#v}"
           token=$(printf '%s:%s' "$SONATYPE_USERNAME" "$SONATYPE_PASSWORD" | base64 | tr -d '\n')
           # AUTOMATIC: validated, then published, by the portal. The answer is the deployment id;

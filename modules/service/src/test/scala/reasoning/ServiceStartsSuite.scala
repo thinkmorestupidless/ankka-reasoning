@@ -55,5 +55,39 @@ class ServiceStartsSuite extends munit.FunSuite:
           HttpResponse.BodyHandlers.ofString()
         )
       assertEquals((response.statusCode, response.body), (200, "ok"))
+      // A run of the appraiser starts, and fails at its first model call naming the missing key.
+      val base = s"http://127.0.0.1:$port"
+      val question = send(
+        base,
+        "/questions",
+        Some(
+          """{"id":"no-key","statement":"Is a run without a model key refused or failed?",
+            |"hypotheses":[{"id":"yes","statement":"it fails"},{"id":"no","statement":"it runs"}]}""".stripMargin
+        )
+      )
+      assertEquals(question.statusCode, 201, question.body)
+      val started = send(
+        base,
+        "/process/runs",
+        Some(
+          """{"blueprint":"appraiser","runId":"no-key-may",
+            |"input":{"tranche":"may","holder":"appraiser-a","question":"no-key"}}""".stripMargin
+        )
+      )
+      assertEquals(started.statusCode, 201, started.body)
+      val ended = reasoning.support.Eventually.eventually(2.minutes) {
+        val run = send(base, "/process/runs/no-key-may", None)
+        assertEquals(run.statusCode, 200, run.body)
+        assert(run.body.contains("\"ending\""), s"the run has not ended: ${run.body}")
+        run.body
+      }
+      println(s"a run with no model key: $ended")
+      assert(ended.contains("\"status\":\"failed\""), ended)
+      assert(ended.contains(Providers.ModelKey), ended)
     finally kit.stop()
   }
+
+  private def send(base: String, path: String, body: Option[String]): HttpResponse[String] =
+    val request = HttpRequest.newBuilder(URI.create(base + path))
+    body.foreach(b => request.POST(HttpRequest.BodyPublishers.ofString(b)))
+    HttpClient.newHttpClient().send(request.build(), HttpResponse.BodyHandlers.ofString())

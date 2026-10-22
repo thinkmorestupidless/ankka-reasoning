@@ -42,7 +42,7 @@ does not publish a snapshot.
 
 ## What nothing can undo
 
-A version on Maven Central cannot be replaced or removed, and the three module names are permanent
+A version on Maven Central cannot be replaced or removed, and the four module names are permanent
 once published. So:
 
 - never move or re-push a tag that has published;
@@ -93,9 +93,10 @@ find /tmp/reasoning-release -name '*.pom'
 /tmp/reasoning-release/com/thinkmorestupidless/ankka-reasoning-belief_3/<version>/ankka-reasoning-belief_3-<version>.pom
 /tmp/reasoning-release/com/thinkmorestupidless/ankka-reasoning-graph_3/<version>/ankka-reasoning-graph_3-<version>.pom
 /tmp/reasoning-release/com/thinkmorestupidless/ankka-reasoning-market_3/<version>/ankka-reasoning-market_3-<version>.pom
+/tmp/reasoning-release/com/thinkmorestupidless/ankka-reasoning-process_3/<version>/ankka-reasoning-process_3-<version>.pom
 ```
 
-Three modules and no fourth: the job checks the same of the bundle it uploads. The image and the
+Four modules and no fifth: the job checks the same of the bundle it uploads. The image and the
 descriptor as the `image` job builds them, without pushing:
 
 ```bash
