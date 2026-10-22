@@ -17,7 +17,7 @@ not a command run by hand. The workflow is
 | Job | Publishes | To |
 |---|---|---|
 | `release-page` | the release page, with generated notes | GitHub releases |
-| `libraries` | `ankka-reasoning-graph`, `ankka-reasoning-belief`, `ankka-reasoning-market`, signed, with sources and documentation | Maven Central, group `com.thinkmorestupidless` |
+| `libraries` | `ankka-reasoning-graph`, `ankka-reasoning-belief`, `ankka-reasoning-market`, `ankka-reasoning-process`, signed, with sources and documentation | Maven Central, group `com.thinkmorestupidless` |
 | `image` | the service's image, tagged with the version and `latest`; then the service descriptor naming that image and the graph sink's descriptor naming the sink image the build pins, attached to the release page | `ghcr.io/thinkmorestupidless/ankka-reasoning` |
 | `marketplace` | the documentation as a Claude Code plugin, at this version | the repository `thinkmorestupidless/ankka-marketplace` |
 

@@ -84,7 +84,7 @@ has the rest.
 ## Release
 
 Push a `v*` tag from `main`; only a tag publishes anything, and `.github/workflows/release.yml` is
-the whole of it: the three layer modules to Maven Central, the image to
+the whole of it: the four library modules to Maven Central, the image to
 `ghcr.io/thinkmorestupidless/ankka-reasoning`, the plugin to ankka-marketplace, and a release page
 with the descriptor and blueprint attached. A tag with a hyphen is a pre-release and gets the page
 only. The version comes from the tag through sbt-dynver: never set `version` in the build, and

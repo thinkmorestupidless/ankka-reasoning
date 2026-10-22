@@ -56,7 +56,7 @@ jobs:
           fi
 
   libraries:
-    # The three layers to Maven Central through the Sonatype Central Portal, signed. Everything else
+    # The four layer modules to Maven Central through the Sonatype Central Portal, signed. Everything else
     # in the build carries `publish / skip`.
     #
     # Upload, and stop, as ankka's release does: ci-release stops at `sonaBundle` and the step after
